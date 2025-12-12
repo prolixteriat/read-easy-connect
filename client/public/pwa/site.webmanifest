@@ -1,0 +1,23 @@
+{
+    "name": "Read Easy Connect",
+    "short_name": "Connect",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "theme_color": "#fbfaf1",
+    "background_color": "#fbfaf1",
+    "icons": [
+        {
+            "src": "/pwa/android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/pwa/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

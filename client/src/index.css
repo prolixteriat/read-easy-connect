@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+html, body, #root {
+  @apply bg-white text-gray-900 min-h-screen;
+}
+
+a {
+  @apply text-indigo-600 hover:text-indigo-500;
+}

@@ -1,0 +1,10 @@
+<phpunit 
+		colors="true" 
+		bootstrap="vendor/autoload.php"
+		displayDetailsOnTestsThatTriggerWarnings="true">
+    <testsuites>
+        <testsuite name="Read Easy Connect Tests">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>
