@@ -247,23 +247,25 @@ export function LTable({ data, readers, onSave, showReturnedAndLost, setShowRetu
                 onChange={(e) => setSelectedRow({ ...selectedRow, item: e.target.value })}
               />
             </div>
-            <div>
-              <label className='block text-sm font-medium text-gray-700'>Loan Date *</label>
-              <input
-                type='date'
-                className='w-full rounded-md border p-2'
-                value={selectedRow.loan_date ? new Date(selectedRow.loan_date).toISOString().split('T')[0] : ''}
-                onChange={(e) => setSelectedRow({ ...selectedRow, loan_date: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className='block text-sm font-medium text-gray-700'>Return Date</label>
-              <input
-                type='date'
-                className='w-full rounded-md border p-2'
-                value={selectedRow.return_date ? new Date(selectedRow.return_date).toISOString().split('T')[0] : ''}
-                onChange={(e) => setSelectedRow({ ...selectedRow, return_date: e.target.value || null })}
-              />
+            <div className='grid grid-cols-2 gap-3'>
+              <div>
+                <label className='block text-sm font-medium text-gray-700'>Loan Date *</label>
+                <input
+                  type='date'
+                  className='w-full rounded-md border p-2'
+                  value={selectedRow.loan_date ? new Date(selectedRow.loan_date).toISOString().split('T')[0] : ''}
+                  onChange={(e) => setSelectedRow({ ...selectedRow, loan_date: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700'>Return Date</label>
+                <input
+                  type='date'
+                  className='w-full rounded-md border p-2'
+                  value={selectedRow.return_date ? new Date(selectedRow.return_date).toISOString().split('T')[0] : ''}
+                  onChange={(e) => setSelectedRow({ ...selectedRow, return_date: e.target.value || null })}
+                />
+              </div>
             </div>
             <div>
               <label className='block text-sm font-medium text-gray-700'>Status</label>
@@ -297,7 +299,7 @@ export function LTable({ data, readers, onSave, showReturnedAndLost, setShowRetu
             onChange={(e) => setNewLoan({ ...newLoan, reader_id: Number(e.target.value) })}
           >
             <option value={0}>Select a reader</option>
-            {readers.map((reader) => (
+            {readers.filter(reader => !['G', 'DO', 'C'].includes(reader.status)).map((reader) => (
               <option key={reader.reader_id} value={reader.reader_id}>
                 {reader.name}
               </option>

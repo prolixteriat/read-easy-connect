@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { useVenues } from '@hooks/useOrg';
+import { useAuth } from '../../../context/useAuth';
 
 import { Loading } from '@components/Common';
 import { VTable } from './VTable';
@@ -9,6 +10,7 @@ import { VTable } from './VTable';
 
 export default function VenuesTable(): React.JSX.Element {
   const { data, error, isLoading, mutate } = useVenues();
+  const { role } = useAuth();
   const [showDisabled, setShowDisabled] = useState(false);
 
   if (isLoading) return <Loading />;
@@ -26,6 +28,7 @@ export default function VenuesTable(): React.JSX.Element {
         onSave={handleSave}
         showDisabled={showDisabled}
         setShowDisabled={setShowDisabled}
+        userRole={role}
       />
     </div>
   );

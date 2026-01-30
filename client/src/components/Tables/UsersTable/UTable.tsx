@@ -63,12 +63,11 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
   const copyToClipboard = useCallback(async () => {
     if (!data || data.length === 0) return;
     
-    const headers = ['First Name', 'Last Name', 'Email', 'Role', 'Status', 'Disabled'];
+    const headers = ['First Name', 'Last Name', 'Email', 'Status', 'Access Suspended'];
     const rows = data.map(user => [
       user.first_name,
       user.last_name,
       user.email,
-      user.role,
       user.status,
       user.disabled ? 'yes' : 'no'
     ]);
@@ -129,14 +128,6 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
       ),
     },
     {
-      accessorKey: 'role',
-      header: () => (
-        <button className='flex items-center'>
-          Role <ArrowUpDown className='ml-1 h-4 w-4' />
-        </button>
-      ),
-    },
-    {
       accessorKey: 'status',
       header: () => (
         <button className='flex items-center'>
@@ -159,7 +150,7 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
       accessorKey: 'disabled',
       header: () => (
         <button className='flex items-center'>
-          Disabled <ArrowUpDown className='ml-1 h-4 w-4' />
+          Access Suspended <ArrowUpDown className='ml-1 h-4 w-4' />
         </button>
       ),
       cell: ({ getValue }) => {
@@ -326,7 +317,7 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
           )}
         </div>
         <Button variant='primary' onClick={() => setIsAddOpen(true)} className='sm:whitespace-nowrap'>
-          Add {roleType ? roleType.charAt(0).toUpperCase() + roleType.slice(1) : 'User'}
+          Add {roleType === 'viewer' ? 'Info Viewer' : roleType ? roleType.charAt(0).toUpperCase() + roleType.slice(1) : 'User'}
         </Button>
       </div>
 
@@ -390,8 +381,7 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
               </div>
               <p className='text-sm text-gray-600 mb-1'>{user.email}</p>
               <div className='flex justify-between items-center text-xs text-gray-500'>
-                <span className='capitalize'>{user.role}</span>
-                <span>{user.disabled ? 'Disabled' : 'Enabled'}</span>
+                <span>Access Suspended: {user.disabled ? 'Yes' : 'No'}</span>
               </div>
             </div>
           );
@@ -399,13 +389,13 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
       </div>
 
       {/* Edit Modal */}
-      <Dialog open={isOpen} onClose={() => setIsOpen(false)} className='relative z-50'>
+      <Dialog open={isOpen} onClose={() => {}} className='relative z-50'>
         <div className='fixed inset-0 bg-black/30' aria-hidden='true' />
         <div className='fixed inset-0 flex items-center justify-center p-4'>
           <DialogPanel className='w-full max-w-md rounded-xl bg-white p-6 shadow-lg'>
             <div className='flex justify-between items-start mb-4'>
               <div>
-                <DialogTitle className='text-lg font-semibold'>Edit {selectedRow?.role ? selectedRow.role.charAt(0).toUpperCase() + selectedRow.role.slice(1) : ''}</DialogTitle>
+                <DialogTitle className='text-lg font-semibold'>Edit {selectedRow?.role === 'viewer' ? 'Info Viewer' : selectedRow?.role ? selectedRow.role.charAt(0).toUpperCase() + selectedRow.role.slice(1) : ''}</DialogTitle>
                 <p className='text-sm text-blue-600 font-bold'>ID: {selectedRow?.user_id} • {selectedRow?.email}</p>
               </div>
               <button onClick={() => setIsOpen(false)}>
@@ -467,7 +457,7 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
                   </select>
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Disabled</label>
+                  <label className='block text-sm font-medium text-gray-700'>Access Suspended</label>
                   <select
                     className='w-full rounded-md border p-2'
                     value={selectedRow.disabled}
@@ -503,13 +493,13 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
       />
       
       {/* Add User Modal */}
-      <Dialog open={isAddOpen} onClose={() => setIsAddOpen(false)} className='relative z-50'>
+      <Dialog open={isAddOpen} onClose={() => {}} className='relative z-50'>
         <div className='fixed inset-0 bg-black/30' aria-hidden='true' />
         <div className='fixed inset-0 flex items-center justify-center p-4'>
           <DialogPanel className='w-full max-w-md rounded-xl bg-white p-6 shadow-lg'>
             <div className='flex justify-between items-start mb-4'>
               <div>
-                <DialogTitle className='text-lg font-semibold'>Add {roleType ? roleType.charAt(0).toUpperCase() + roleType.slice(1) : 'User'}</DialogTitle>
+                <DialogTitle className='text-lg font-semibold'>Add {roleType === 'viewer' ? 'Info Viewer' : roleType ? roleType.charAt(0).toUpperCase() + roleType.slice(1) : 'User'}</DialogTitle>
               </div>
               <button onClick={handleAddCancel}>
                 <X className='h-5 w-5 text-gray-500' />

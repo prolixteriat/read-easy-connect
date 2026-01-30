@@ -22,7 +22,7 @@ ChartJS.register(
 
 // -----------------------------------------------------------------------------
 
-interface ReadersCoordsChartProps {
+interface ReaderDetailChartProps {
   filteredData?: Array<{
     area_id: number | null;
     area_name: string | null;
@@ -41,38 +41,41 @@ interface ReadersCoordsChartProps {
   }>;
 }
 
-export default function ReadersCoordsChart({ filteredData }: ReadersCoordsChartProps): React.JSX.Element {
+export default function ReaderDetailChart({ filteredData }: ReaderDetailChartProps): React.JSX.Element {
   const displayData = filteredData || [];
+
+
 
   if (displayData.length === 0) {
     return <div className='text-gray-600'>No readers match the selected filters</div>;
   }
 
-  // Group by coordinator
-  const coordData = displayData.reduce((acc, reader) => {
-    const coordName = reader.coordinator_name || 'Unassigned';
-    if (!acc[coordName]) {
-      acc[coordName] = { total: 0, byStatus: {} };
+  // Use filtered data and group by area
+  const validReaders = displayData;
+  const areaData = validReaders.reduce((acc, reader) => {
+    const areaName = reader.area_name || 'Unassigned';
+    if (!acc[areaName]) {
+      acc[areaName] = { total: 0, byStatus: {} };
     }
-    acc[coordName].total++;
+    acc[areaName].total++;
     const status = reader.reader_status || 'Unknown';
-    acc[coordName].byStatus[status] = (acc[coordName].byStatus[status] || 0) + 1;
+    acc[areaName].byStatus[status] = (acc[areaName].byStatus[status] || 0) + 1;
     return acc;
   }, {} as Record<string, { total: number; byStatus: Record<string, number> }>);
 
-  // Sort coordinators to put 'Unassigned' at the end
-  const coordinators = Object.keys(coordData).sort((a, b) => {
+  // Sort areas to put 'Unassigned' at the end
+  const areas = Object.keys(areaData).sort((a, b) => {
     if (a === 'Unassigned') return 1;
     if (b === 'Unassigned') return -1;
     return a.localeCompare(b);
   });
-  const allStatuses = [...new Set(displayData.map(r => r.reader_status || 'Unknown'))];
+  const allStatuses = [...new Set(validReaders.map(r => r.reader_status || 'Unknown'))];
 
   const chartData = {
-    labels: coordinators,
+    labels: areas,
     datasets: allStatuses.map((status, index) => ({
       label: status,
-      data: coordinators.map(coord => coordData[coord].byStatus[status] || 0),
+      data: areas.map(area => areaData[area].byStatus[status] || 0),
       backgroundColor: [
         '#3b82f680',
         '#f9731680', 
@@ -104,7 +107,7 @@ export default function ReadersCoordsChart({ filteredData }: ReadersCoordsChartP
         stacked: true,
         title: {
           display: true,
-          text: 'Coordinators',
+          text: 'Areas',
         },
       },
       y: {

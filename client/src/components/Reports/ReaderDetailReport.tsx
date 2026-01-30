@@ -1,21 +1,21 @@
 import React, { Suspense, useState, useMemo, useEffect } from 'react';
 
-import { useReadersDetail } from '@hooks/useReports';
+import { useReaderDetail } from '@hooks/useReports';
 
-import { ReadersDetailChart, ReadersCoordsChart } from '@lib/lazy';
+import { ReaderDetailChart, ReaderCoordsChart } from '@lib/lazy';
 import { type TReaderStatus } from '@lib/types';
 
 import { Loading } from '@components/Common';
 
-import ReadersDetailTable from './ReadersDetailTable';
-import ReadersStatusFilter from './ReadersStatusFilter';
+import ReadersDetailTable from './ReaderDetailTable';
+import ReadersStatusFilter from './ReaderStatusFilter';
 
 // -----------------------------------------------------------------------------
 
 const STORAGE_KEY = 'readersDetailReport_selectedStatuses';
 
-export default function ReadersDetailReport(): React.JSX.Element {
-  const { data, isLoading } = useReadersDetail();
+export default function ReaderDetailReport(): React.JSX.Element {
+  const { data, isLoading } = useReaderDetail();
   const [selectedStatuses, setSelectedStatuses] = useState<TReaderStatus[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -48,8 +48,8 @@ export default function ReadersDetailReport(): React.JSX.Element {
               onStatusChange={setSelectedStatuses}
             />
             <ReadersDetailTable filteredData={filteredData} />
-            <Suspense fallback={<Loading />}><ReadersDetailChart filteredData={filteredData} /></Suspense>
-            <Suspense fallback={<Loading />}><ReadersCoordsChart filteredData={filteredData} /></Suspense>
+            <Suspense fallback={<Loading />}><ReaderDetailChart filteredData={filteredData} /></Suspense>
+            <Suspense fallback={<Loading />}><ReaderCoordsChart filteredData={filteredData} /></Suspense>
           </div>
         )
       }

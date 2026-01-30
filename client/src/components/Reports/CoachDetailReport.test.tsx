@@ -1,21 +1,21 @@
 import { render, screen } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import CoachesSummaryReport from './CoachesSummaryReport';
+import CoachDetailReport from './CoachDetailReport';
 
 // -----------------------------------------------------------------------------
-// Mock the useCoachesSummary hook
+// Mock the useCoachDetail hook
 vi.mock('@hooks/useReports', () => ({
-  useCoachesSummary: vi.fn(),
+  useCoachDetail: vi.fn(),
 }));
 
 // Mock lazy loaded components
 vi.mock('@lib/lazy', () => ({
-  CoachesSummaryChart: vi.fn(() => <div data-testid="coaches-summary-chart">Chart</div>),
+  CoachDetailChart: vi.fn(() => <div data-testid="coach-detail-chart">Chart</div>),
 }));
 
-// Mock CoachesSummaryTable component
-vi.mock('./CoachesSummaryTable', () => ({
-  default: vi.fn(() => <div data-testid="coaches-summary-table">Table</div>),
+// Mock CoachDetailable component
+vi.mock('./CoachDetailTable', () => ({
+  default: vi.fn(() => <div data-testid="coach-detail-table">Table</div>),
 }));
 
 // Mock the Loading component
@@ -24,65 +24,65 @@ vi.mock('@components/Common', () => ({
 }));
 // -----------------------------------------------------------------------------
 
-import { useCoachesSummary } from '@hooks/useReports';
+import { useCoachDetail } from '@hooks/useReports';
 
 // -----------------------------------------------------------------------------
 
-describe('CoachesSummaryReport', () => {
+describe('CoachDetailReport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('renders loading state', () => {
-    vi.mocked(useCoachesSummary).mockReturnValue({
+    vi.mocked(useCoachDetail).mockReturnValue({
       data: undefined,
       error: undefined,
       isLoading: true,
       mutate: vi.fn(),
     });
 
-    render(<CoachesSummaryReport />);
+    render(<CoachDetailReport />);
     expect(screen.getByTestId('loading')).toBeInTheDocument();
   });
 
   it('renders table and chart when not loading', () => {
-    vi.mocked(useCoachesSummary).mockReturnValue({
+    vi.mocked(useCoachDetail).mockReturnValue({
       data: [],
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),
     });
 
-    render(<CoachesSummaryReport />);
-    expect(screen.getByTestId('coaches-summary-table')).toBeInTheDocument();
-    expect(screen.getByTestId('coaches-summary-chart')).toBeInTheDocument();
+    render(<CoachDetailReport />);
+    expect(screen.getByTestId('coach-detail-table')).toBeInTheDocument();
+    expect(screen.getByTestId('coach-detail-chart')).toBeInTheDocument();
   });
 
   it('does not render table and chart when loading', () => {
-    vi.mocked(useCoachesSummary).mockReturnValue({
+    vi.mocked(useCoachDetail).mockReturnValue({
       data: undefined,
       error: undefined,
       isLoading: true,
       mutate: vi.fn(),
     });
 
-    render(<CoachesSummaryReport />);
-    expect(screen.queryByTestId('coaches-summary-table')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('coaches-summary-chart')).not.toBeInTheDocument();
+    render(<CoachDetailReport />);
+    expect(screen.queryByTestId('coach-detail-table')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('coach-detail-chart')).not.toBeInTheDocument();
   });
 
   it('renders components in correct order when loaded', () => {
-    vi.mocked(useCoachesSummary).mockReturnValue({
+    vi.mocked(useCoachDetail).mockReturnValue({
       data: [],
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),
     });
 
-    render(<CoachesSummaryReport />);
+    render(<CoachDetailReport />);
     
-    const table = screen.getByTestId('coaches-summary-table');
-    const chart = screen.getByTestId('coaches-summary-chart');
+    const table = screen.getByTestId('coach-detail-table');
+    const chart = screen.getByTestId('coach-detail-chart');
     
     expect(table).toBeInTheDocument();
     expect(chart).toBeInTheDocument();

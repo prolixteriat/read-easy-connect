@@ -31,14 +31,59 @@ class DbReviews extends DbBase {
         if (!$status->success) {
             return $status;
         }
+        
+        # Validate numeric IDs
+        foreach (['coordinator_id', 'coach_id', 'reader_id', 'venue_id'] as $id_field) {
+            if (!is_numeric($data[$id_field]) || $data[$id_field] <= 0) {
+                return new Status(false, 400, ['message' => "Invalid {$id_field}"]);
+            }
+        }
 
         try {
+            # Validate access to all referenced entities
+            $user_affiliate = $this->get_user_affiliate_id($this->user_id, $this->role);
+            if (!$user_affiliate) {
+                return new Status(false, 403, ['message' => 'User not associated with any affiliate']);
+            }
+            
+            # Role-specific access control: coordinators can only add reviews for themselves
+            if ($this->role === 'coordinator' && (int)$data['coordinator_id'] !== $this->user_id) {
+                return new Status(false, 403, ['message' => 'Coordinators can only add reviews for themselves']);
+            }
+            
+            # Verify coordinator belongs to same affiliate
+            $coord_check = $this->conn->prepare('SELECT affiliate_id FROM coordinators WHERE coordinator_id = :coordinator_id');
+            $coord_check->execute([':coordinator_id' => $data['coordinator_id']]);
+            $coord_affiliate = $coord_check->fetchColumn();
+            if (!$coord_affiliate || $coord_affiliate !== $user_affiliate) {
+                return new Status(false, 403, ['message' => 'Access denied to this coordinator']);
+            }
+            
+            # Verify coach belongs to same affiliate
+            $coach_check = $this->conn->prepare('SELECT affiliate_id FROM coaches WHERE coach_id = :coach_id');
+            $coach_check->execute([':coach_id' => $data['coach_id']]);
+            $coach_affiliate = $coach_check->fetchColumn();
+            if (!$coach_affiliate || $coach_affiliate !== $user_affiliate) {
+                return new Status(false, 403, ['message' => 'Access denied to this coach']);
+            }
+            
+            # Verify reader belongs to same affiliate
+            $reader_check = $this->conn->prepare('SELECT affiliate_id FROM readers WHERE reader_id = :reader_id');
+            $reader_check->execute([':reader_id' => $data['reader_id']]);
+            $reader_affiliate = $reader_check->fetchColumn();
+            if (!$reader_affiliate || $reader_affiliate !== $user_affiliate) {
+                return new Status(false, 403, ['message' => 'Access denied to this reader']);
+            }
+            
             $query = '
                 INSERT INTO reviews (coordinator_id, coach_id, reader_id, date, venue_id, status, notes)
                 VALUES (:coordinator_id, :coach_id, :reader_id, :date, :venue_id, :status, :notes)
             ';
             $stmt = $this->conn->prepare($query);
-            $stmt->execute([
+            if (!$stmt) {
+                throw new Exception('Failed to prepare review insert query');
+            }
+            $result = $stmt->execute([
                 ':coordinator_id' => $data['coordinator_id'],
                 ':coach_id' => $data['coach_id'],
                 ':reader_id' => $data['reader_id'],
@@ -47,10 +92,12 @@ class DbReviews extends DbBase {
                 ':status' => $data['status'] ?? 'scheduled',
                 ':notes' => $data['notes'] ?? null
             ]);
+            if (!$result) {
+                throw new Exception('Failed to insert review record');
+            }
             $review_id = $this->conn->lastInsertId();
             $user_affiliate = $this->get_user_affiliate_id($this->user_id, $this->role);
-            $this->add_audit(AuditType::REVIEW_ADDED, "Review added: ID {$review_id}", 
-                            $this->user_id, $user_affiliate);
+            # $this->add_audit(AuditType::REVIEW_ADDED, "Review added: ID {$review_id}", $this->user_id, $user_affiliate);
             
             # Send review invitation email
             $this->send_review_invitation_email((int)$review_id, 
@@ -81,6 +128,11 @@ class DbReviews extends DbBase {
         $status = $this->validate_params($data, $required);
         if (!$status->success) {
             return $status;
+        }
+        
+        # Validate review_id is numeric and positive
+        if (!is_numeric($data['review_id']) || $data['review_id'] <= 0) {
+            return new Status(false, 400, ['message' => 'Invalid review_id']);
         }
 
         try {
@@ -133,7 +185,14 @@ class DbReviews extends DbBase {
             $query = 'UPDATE reviews SET ' . implode(', ', $updates) . 
                         ' WHERE review_id = :review_id';
             $stmt = $this->conn->prepare($query);
-            $stmt->execute($params);
+            if (!$stmt) {
+                throw new Exception('Failed to prepare review update query');
+            }
+            
+            $result = $stmt->execute($params);
+            if (!$result) {
+                throw new Exception('Failed to execute review update query');
+            }
             
             # Send review update or cancellation email
             if (isset($data['status'])) {
@@ -145,9 +204,7 @@ class DbReviews extends DbBase {
             }
             
             $user_affiliate = $this->get_user_affiliate_id($this->user_id, $this->role);
-            $this->add_audit(AuditType::REVIEW_EDITED, 
-                        "Review updated: ID {$data['review_id']}", 
-                        $this->user_id, $user_affiliate);
+            # $this->add_audit(AuditType::REVIEW_EDITED, "Review updated: ID {$data['review_id']}", $this->user_id, $user_affiliate);
             $status = new Status(true, 200, ['message' => 'Review updated successfully']);
         } catch (Exception $e) {
             $this->logger->error('reviews_edit: ' . $e->getMessage());
@@ -388,7 +445,7 @@ class DbReviews extends DbBase {
     private function get_review_data(int $review_id, bool $include_ics): ?array {
         try {
             $ics_fields = $include_ics ? ', r.ics_uid, r.ics_sequence' : '';
-            $sql = "SELECT r.date{$ics_fields},
+            $sql = "SELECT r.date, r.coach_id{$ics_fields},
                            uc.email as coordinator_email, uc.first_name as coordinator_first_name, uc.last_name as coordinator_last_name,
                            uco.email as coach_email, uco.first_name as coach_first_name, uco.last_name as coach_last_name,
                            rd.name as reader_name, v.name as venue_name, v.address as venue_address
@@ -415,6 +472,7 @@ class DbReviews extends DbBase {
                 'venue_name' => $result['venue_name'],
                 'venue_address' => $result['venue_address'] ?? '',
                 'date' => $result['date'],
+                'coach_id' => $result['coach_id'],
                 'ics_uid' => $result['ics_uid'] ?? null,
                 'ics_sequence' => $result['ics_sequence'] ?? 0
             ];
@@ -457,8 +515,9 @@ class DbReviews extends DbBase {
         $body = $this->build_email_body('cancelled', $data);
         
         $mailer = new Mailer();
+        $coach_email = $this->ok_email_coach($data['coach_id']) ? $data['coach_email'] : null;
         $success = $mailer->send_email($data['coordinator_email'], $subject, $body, 
-                            $data['coach_email']);
+                            $coach_email);
         if (!$success) {
             throw new Exception("Failed to send review cancellation email for review ID: {$review_id}");
         }                            
@@ -482,8 +541,9 @@ class DbReviews extends DbBase {
                     $data['coordinator_email'], $data['coach_email']);
         
         $mailer = new Mailer();
+        $coach_email = $this->ok_email_coach($coach_id) ? $data['coach_email'] : null;        
         $success = $mailer->send_email_with_attachment($data['coordinator_email'], $subject, $body, 
-                    $ics_content, 'review_invitation.ics', $data['coach_email']);
+                    $ics_content, 'review_invitation.ics', $coach_email);
         
         if (!$success) {
             throw new Exception("Failed to send review invitation email for review ID: {$review_id}");
@@ -493,7 +553,9 @@ class DbReviews extends DbBase {
     
     private function send_review_update_email(int $review_id): void {
         $data = $this->get_review_data($review_id, true);
-        if (!$data) return;
+        if (!$data) {
+            throw new Exception("Failed to get review data for review ID: {$review_id}");
+        }
         
         $new_sequence = $this->increment_ics_sequence($review_id);
         $subject = 'Reader Review Update';
@@ -504,8 +566,9 @@ class DbReviews extends DbBase {
                     $data['coordinator_email'], $data['coach_email']);
         
         $mailer = new Mailer();
+        $coach_email = $this->ok_email_coach($data['coach_id']) ? $data['coach_email'] : null;
         $mailer->send_email_with_attachment($data['coordinator_email'], $subject, $body, 
-                    $ics_content, 'review_update.ics', $data['coach_email']);
+                    $ics_content, 'review_update.ics', $coach_email);
     }
     # --------------------------------------------------------------------------
 }

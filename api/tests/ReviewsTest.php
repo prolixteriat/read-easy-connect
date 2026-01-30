@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------
 
 require_once __DIR__ . '/tst/TstDbReviews.php';
-require_once __DIR__ . '/utils/creds.php';
+require_once __DIR__ . '/tst/TstDbBase.php';
 
 # ------------------------------------------------------------------------------
 
@@ -18,19 +18,19 @@ class ReviewsTest extends TestCase {
 
     protected Slim\App $app;
     protected TstDbReviews $db;
+    protected TstDbBase $base;
     protected string $jwt_token;
     protected ServerRequestFactory $request_factory;
     protected StreamFactory $stream_factory;
-    protected array $tokens;
 
     # --------------------------------------------------------------------------
 
     protected function setUp(): void {
         
-        $this->tokens = TestTokens::get();
+        $this->base = new TstDbBase();
         $this->db = new TstDbReviews();
         $this->app = AppFactory::create();
-        $this->jwt_token = $this->tokens['coordinator']; 
+        $this->jwt_token = $this->base->test_coordinator_jwt; 
         $this->request_factory = new ServerRequestFactory();
         $this->stream_factory = new StreamFactory();
 
@@ -38,16 +38,21 @@ class ReviewsTest extends TestCase {
     }
     # --------------------------------------------------------------------------
 
+    protected function tearDown(): void {
+        $this->base->cleanup();
+    }
+    # --------------------------------------------------------------------------
+
     public function test_add(): void {
 
-        $payload = ['coordinator_id' => '4', 
-                    'coach_id' => '6',
-                    'reader_id' => '1',
+        $payload = ['coordinator_id' => $this->base->test_coordinator_id, 
+                    'coach_id' => $this->base->test_coach_id,
+                    'reader_id' => $this->base->test_reader_id,
                     'date' => '2024-01-15',
-                    'venue_id' => 1];
+                    'venue_id' => $this->base->test_venue_id];
         $review_id = null;
         try {
-            $this->jwt_token = $this->tokens['coordinator'];
+            $this->jwt_token = $this->base->test_coordinator_jwt;
             $request = $this->create_request('POST', '/reviews/add-review', 
                                 $payload);
             $response = $this->app->handle($request);
@@ -67,15 +72,15 @@ class ReviewsTest extends TestCase {
 
         $review_id = null;
         try {
-            $this->jwt_token = $this->tokens['coordinator'];
+            $this->jwt_token = $this->base->test_coordinator_jwt;
             
             # Add new test review
             $add_payload = [
-                'coordinator_id' => TEST_COORDINATOR_ID,
-                'coach_id' => TEST_COACH_ID,
-                'reader_id' => TEST_READER_ID,
+                'coordinator_id' => $this->base->test_coordinator_id,
+                'coach_id' => $this->base->test_coach_id,
+                'reader_id' => $this->base->test_reader_id,
                 'date' => '2024-01-15',
-                'venue_id' => TEST_VENUE_ID
+                'venue_id' => $this->base->test_venue_id
             ];
             $add_request = $this->create_request('POST', '/reviews/add-review', 
                                                 $add_payload);
@@ -86,7 +91,7 @@ class ReviewsTest extends TestCase {
             
             # Retrieve and check initial venue_id
             $get_request = $this->create_request('GET', 
-                    '/reviews/get-reviews-coordinator?coordinator_id=' . TEST_COORDINATOR_ID);
+                    '/reviews/get-reviews-coordinator?coordinator_id=' . $this->base->test_coordinator_id);
             $get_response = $this->app->handle($get_request);
             $this->assertEquals(200, $get_response->getStatusCode());
             $reviews = json_decode((string) $get_response->getBody(), true);
@@ -97,7 +102,7 @@ class ReviewsTest extends TestCase {
             # Update review venue_id
             $edit_payload = [
                 'review_id' => $review_id,
-                'venue_id' => TEST_VENUE_ID
+                'venue_id' => $this->base->test_venue_id
             ];
             $edit_request = $this->create_request('POST', 
                                     '/reviews/edit-review', $edit_payload);
@@ -106,7 +111,7 @@ class ReviewsTest extends TestCase {
             
             # Retrieve and check updated venue_id
             $get_request2 = $this->create_request('GET', 
-                    '/reviews/get-reviews-coordinator?coordinator_id=' . TEST_COORDINATOR_ID);
+                    '/reviews/get-reviews-coordinator?coordinator_id=' . $this->base->test_coordinator_id);
             $get_response2 = $this->app->handle($get_request2);
             $this->assertEquals(200, $get_response2->getStatusCode());
             $reviews2 = json_decode((string) $get_response2->getBody(), true);
@@ -124,9 +129,9 @@ class ReviewsTest extends TestCase {
 
     public function test_get_reviews_coordinator(): void {
 
-        $this->jwt_token = $this->tokens['coordinator'];
+        $this->jwt_token = $this->base->test_coordinator_jwt;
         $request = $this->create_request('GET', 
-                '/reviews/get-reviews-coordinator?coordinator_id=' . TEST_COORDINATOR_ID);
+                '/reviews/get-reviews-coordinator?coordinator_id=' . $this->base->test_coordinator_id);
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());
         $body = (string) $response->getBody();
@@ -137,7 +142,7 @@ class ReviewsTest extends TestCase {
 
     public function test_get_reviews(): void {
 
-        $this->jwt_token = $this->tokens['coordinator'];
+        $this->jwt_token = $this->base->test_coordinator_jwt;
         $request = $this->create_request('GET', '/reviews/get-reviews');
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());

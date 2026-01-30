@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { apiBaseUrl } from '@lib/config';
 import { fetcherAuth } from '@lib/fetcher';
 import { JwtManager } from '@lib/jwtManager';
+import { type TTrainingStatus } from '@lib/types';
 
 // -----------------------------------------------------------------------------
 
@@ -35,9 +36,11 @@ const CoachSchema = z.object({
     dbs_completed: z.number(),
     ref_completed: z.number(),
     commitment_completed: z.number(),
-    training_booked: z.number(),
-    edib_train_completed: z.number(),
-    consol_train_completed: z.number(),
+    training: z.custom<TTrainingStatus>(),
+    edib_training: z.custom<TTrainingStatus>(),
+    consol_training: z.custom<TTrainingStatus>(),
+    use_email: z.number(),
+    consol_training_at: z.string().nullable(),
     availability: z.string().nullable(),
     preferences: z.string().nullable(),
     notes: z.string().nullable(),

@@ -16,9 +16,13 @@ class DbReaders extends DbBase {
     # --------------------------------------------------------------------------
     # Methods
     # --------------------------------------------------------------------------
-    # Role: manager
-    # Mandatory: name
-    # Optional : area_id, coach_id, level, status, referrer_name, referrer_org, availability, notes, enrolment_at, coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, TP5_start_at, TP1_completion_at, TP2_completion_at, TP3_completion_at, TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3
+    # Role: manager, coordinator
+    # Mandatory: n/a
+    # Optional : area_id, coach_id, level, status, referrer_name, referrer_org, 
+    #   availability, notes, enrolment_at, coaching_start_at, graduation_at, 
+    #   TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, TP5_start_at, 
+    #   TP1_completion_at, TP2_completion_at, TP3_completion_at, TP4_completion_at, 
+    #  TP5_completion_at, ons4_1, ons4_2, ons4_3
 
     public function add_reader(Request $request): Status {
         try {
@@ -27,10 +31,26 @@ class DbReaders extends DbBase {
                 return $status; 
             }
             $params = $this->sanitise_array($request->getParsedBody());
+            /*
             $required_params = ['name'];
             $status = $this->validate_params($params, $required_params);
             if (!$status->success) { 
                 return $status; 
+            }
+            
+            # Validate reader name is not empty
+            if (empty(trim($params['name']))) {
+                return new Status(false, 400, ['message' => 'Reader name cannot be empty']);
+            }
+            */
+            $name = $this->create_reader_name();
+            # Validate coach_id if provided
+            if (isset($params['coach_id']) && $params['coach_id']) {
+                $coach_check = $this->conn->prepare('SELECT coach_id FROM coaches WHERE coach_id = :coach_id');
+                $coach_check->execute([':coach_id' => $params['coach_id']]);
+                if (!$coach_check->fetchColumn()) {
+                    return new Status(false, 400, ['message' => 'Invalid coach_id']);
+                }
             }
 
             $user_affiliate = $this->get_user_affiliate_id($this->user_id, $this->role);
@@ -39,12 +59,24 @@ class DbReaders extends DbBase {
                 return new Status(false, 403, ['message' => 'Manager not associated with any affiliate']);
             }
 
-            $sql = 'INSERT INTO readers (name, affiliate_id, area_id, coach_id, referrer_name, referrer_org, level, status, availability, notes, enrolment_at, coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, TP5_start_at, TP1_completion_at, TP2_completion_at, TP3_completion_at, TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3) 
-                    VALUES (:name, :affiliate_id, :area_id, :coach_id, :referrer_name, :referrer_org, :level, :status, :availability, :notes, :enrolment_at, :coaching_start_at, :graduation_at, :TP1_start_at, :TP2_start_at, :TP3_start_at, :TP4_start_at, :TP5_start_at, :TP1_completion_at, :TP2_completion_at, :TP3_completion_at, :TP4_completion_at, :TP5_completion_at, :ons4_1, :ons4_2, :ons4_3)';
+            $sql = 'INSERT INTO readers (name, affiliate_id, area_id, coach_id, 
+                        referrer_name, referrer_org, level, status, availability, 
+                        notes, enrolment_at, coaching_start_at, graduation_at, 
+                        TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, 
+                        TP5_start_at, TP1_completion_at, TP2_completion_at,
+                        TP3_completion_at, TP4_completion_at, TP5_completion_at, 
+                        ons4_1, ons4_2, ons4_3) 
+                    VALUES (:name, :affiliate_id, :area_id, :coach_id, 
+                        :referrer_name, :referrer_org, :level, :status, :availability, 
+                        :notes, :enrolment_at, :coaching_start_at, :graduation_at, 
+                        :TP1_start_at, :TP2_start_at, :TP3_start_at, :TP4_start_at, 
+                        :TP5_start_at, :TP1_completion_at, :TP2_completion_at, 
+                        :TP3_completion_at, :TP4_completion_at, :TP5_completion_at, 
+                        :ons4_1, :ons4_2, :ons4_3)';
 
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([
-                ':name'               => $params['name'],
+                ':name'               => $name,
                 ':affiliate_id'       => $user_affiliate,
                 ':area_id'            => $params['area_id'] ?? null,
                 ':coach_id'           => $params['coach_id'] ?? null,
@@ -80,9 +112,10 @@ class DbReaders extends DbBase {
                 $update_stmt = $this->conn->prepare($update_sql);
                 $update_stmt->execute([':coach_id' => $params['coach_id']]);
             }
-            $status = new Status(true, 200, ['reader_id' => (int)$reader_id]);
-            $user_affiliate = $this->get_user_affiliate_id($this->user_id, $this->role);
-            $this->add_audit(AuditType::OTHER, "Reader added: {$params['name']}", $this->user_id, $user_affiliate);
+            $status = new Status(true, 200, 
+                ['reader_id' => (int)$reader_id,
+                 'name' => $name]);
+            $this->add_audit(AuditType::OTHER, "Reader added: {$name}", $this->user_id, $user_affiliate);
             
         } catch (Exception $e) {
             $this->logger->error('add_reader: ' . $e->getMessage());
@@ -95,7 +128,7 @@ class DbReaders extends DbBase {
     # --------------------------------------------------------------------------
     # Role: manager, coordinator
     # Mandatory: reader_id
-    # Optional : name, area_id, coach_id, level, status, referrer_name, referrer_org, availability, notes, enrolment_at, coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, TP5_start_at, TP1_completion_at, TP2_completion_at, TP3_completion_at, TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3 
+    # Optional : area_id, coach_id, level, status, referrer_name, referrer_org, availability, notes, enrolment_at, coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, TP5_start_at, TP1_completion_at, TP2_completion_at, TP3_completion_at, TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3 
 
     public function edit_reader(Request $request): Status {
         try {
@@ -109,10 +142,20 @@ class DbReaders extends DbBase {
             if (!$status->success) { 
                 return $status; 
             }
+            
+            # Validate reader_id is numeric and positive
+            if (!is_numeric($params['reader_id']) || $params['reader_id'] <= 0) {
+                return new Status(false, 400, ['message' => 'Invalid reader_id']);
+            }
 
             $reader_id = (int)$params['reader_id'];
 
-            $sql = 'SELECT name, affiliate_id, area_id, coach_id, referrer_name, referrer_org, level, status, availability, notes, enrolment_at, coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, TP5_start_at, TP1_completion_at, TP2_completion_at, TP3_completion_at, TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3
+            $sql = 'SELECT name, affiliate_id, area_id, coach_id, referrer_name, 
+                    referrer_org, level, status, availability, notes, enrolment_at, 
+                    coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, 
+                    TP3_start_at, TP4_start_at, TP5_start_at, TP1_completion_at, 
+                    TP2_completion_at, TP3_completion_at, TP4_completion_at, 
+                    TP5_completion_at, ons4_1, ons4_2, ons4_3
                    FROM readers 
                    WHERE reader_id = :reader_id 
                    LIMIT 1';
@@ -131,7 +174,7 @@ class DbReaders extends DbBase {
                 return new Status(false, 403, ['message' => 'Can only edit readers in your affiliate']);
             }
 
-            $name = $params['name'] ?? $result['name'];
+            $name = $result['name'];
             $affiliate_id = $result['affiliate_id'];
             $area_id = array_key_exists('area_id', $params) ? $params['area_id'] : $result['area_id'];
             $coach_id = array_key_exists('coach_id', $params) ? $params['coach_id'] : $result['coach_id'];
@@ -162,8 +205,7 @@ class DbReaders extends DbBase {
             $original_coach_id = $result['coach_id'];
             
             $sql = 'UPDATE readers
-                    SET name = :name,
-                        affiliate_id = :affiliate_id,
+                    SET affiliate_id = :affiliate_id,
                         area_id = :area_id,
                         coach_id = :coach_id,
                         referrer_name = :referrer_name,
@@ -191,7 +233,6 @@ class DbReaders extends DbBase {
                     WHERE reader_id = :reader_id';
             $stmt = $this->conn->prepare($sql);                    
             $stmt->execute([
-                ':name'               => $name,
                 ':affiliate_id'       => $affiliate_id,
                 ':area_id'            => $area_id,
                 ':coach_id'           => $coach_id,
@@ -297,6 +338,11 @@ class DbReaders extends DbBase {
                 return $status;
             }
             
+            # Validate reader_id is numeric and positive
+            if (!is_numeric($data['reader_id']) || $data['reader_id'] <= 0) {
+                return new Status(false, 400, ['message' => 'Invalid reader_id']);
+            }
+            
             $reader_id = (int)$data['reader_id'];
             $query = $this->build_reader_query($reader_id);
             $stmt = $this->conn->prepare($query['sql']);
@@ -399,6 +445,27 @@ class DbReaders extends DbBase {
     }
     # --------------------------------------------------------------------------
 
+    private function create_reader_name(): string {
+        $stmt = $this->conn->prepare('
+            SELECT first_name, last_name 
+            FROM users 
+            WHERE user_id = ?');
+        $stmt->execute([$this->user_id]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        $first_initial = strtoupper(substr($user['first_name'], 0, 1));
+        $last_initial = strtoupper(substr($user['last_name'], 0, 1));
+        
+        $stmt = $this->conn->query('
+            SELECT AUTO_INCREMENT 
+            FROM information_schema.TABLES 
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "readers"');
+        $next_reader_id = $stmt->fetchColumn();
+        $reader_name = "{$first_initial}{$last_initial}{$this->user_id}-{$next_reader_id}";
+        return $reader_name;
+    }
+    # --------------------------------------------------------------------------
+
     private function send_tp_completion_email(?int $coach_id, string $reader_name, 
                                             string $level): void {
         if (!$coach_id) return;
@@ -415,20 +482,34 @@ class DbReaders extends DbBase {
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$result) return;
-                        
-            if ($level === 'post-TP1') {
-                $text = '<p>Consolidation training should now be completed.</p>';
-            } else {
-                $text = "<p>The <a href='https://www.ons.gov.uk/peoplepopulationandcommunity/wellbeing/methodologies/personalwellbeingsurveyuserguide'>ONS4 survey</a> should now be conducted.</p>";
-            }
+            
+            $use_coach_email = $this->ok_email_coach($coach_id);
+            $to_email = $use_coach_email ? $result['coach_email'] : $result['coordinator_email'];
+            $cc_email = $use_coach_email ? $result['coordinator_email'] : null;
+            $salutation = $use_coach_email ? 'Dear Coach,' : 'Dear Coordinator,';
+
+            $text = '';
+            if ($level === 'pre-TP1') {
+                $text .= '<p>Please now complete the ONS4 survey.</p>';
+            } elseif ($level === 'post-TP1') {
+                $text .= '<p>Please contact your Coordinator to book you in for 
+                        the Coach consolidation training if not previously 
+                        undertaken.</p>';
+            } elseif ($level === 'post-TP3')  {
+                $text .= '<p>Please now complete the ONS4 survey as well as the 
+                        Coach and Reader feedback discussion paperwork.</p>';
+            } elseif ($level === 'post-TP5')  {
+                $text .= '<p>Please now complete the ONS4 survey as well as the 
+                        Reader finisher paperwork.</p>';
+            }        
             $subject = "Reader Progress Update - {$level} reached";
             $body = "
-                <p>Dear Coach,</p>
-                <p><strong>{$reader_name}</strong> has reached the <strong>{$level}</strong> level.</p>
+                <p>{$salutation}</p>
+                <p>Reader <strong>{$reader_name}</strong> has reached the <strong>{$level}</strong> level.</p>
                 {$text}";
             
             $mailer = new Mailer();
-            $mailer->send_email($result['coach_email'], $subject, $body, $result['coordinator_email']);
+            $mailer->send_email($to_email, $subject, $body, $cc_email);
             
         } catch (Exception $e) {
             $this->logger->error('send_tp_completion_email: ' . $e->getMessage());

@@ -8,7 +8,7 @@ import { useCoaches } from '@hooks/useCoaches';
 import { editReader, addReader } from '@lib/api/apiReaders';
 import { asString} from '@lib/helper';
 
-import { Button, ConfirmDialog, ErrorDialog, Loading } from '@components/Common';
+import { Button, ConfirmDialog, ErrorDialog, Loading, HoverHelp, MessageDialog } from '@components/Common';
 import { BaseTable, TableModal, useTableState, createSortableHeader, 
         createStatusColumn } from '../BaseTable';
 
@@ -32,8 +32,9 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
   const [showConfirm, setShowConfirm] = useState(false);
   const [showAddConfirm, setShowAddConfirm] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [addedReaderName, setAddedReaderName] = useState('');
   const [newReader, setNewReader] = useState({ 
-    name: '', 
     area_id: null as number | null,
     coach_id: null as number | null,
     enrolment_at: null as string | null,
@@ -60,7 +61,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
   const copyToClipboard = useCallback(async () => {
     if (!data || data.length === 0) return;
     
-    const headers = ['Name', 'Level', 'Status', 'Area', 'Coach'];
+    const headers = ['Reader ID', 'Level', 'Status', 'Area', 'Coach'];
     const rows = data.map(reader => [
       reader.name,
       reader.level,
@@ -102,9 +103,21 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
   const columns: ColumnDef<Reader>[] = [
     {
       accessorKey: 'name',
-      header: createSortableHeader('Name', true, copyToClipboard, tableState.showCopied),
+      header: createSortableHeader('Reader ID', true, copyToClipboard, tableState.showCopied),
     },
-    createStatusColumn('level', levelMap),
+    {
+      accessorKey: 'level',
+      header: createSortableHeader('Level'),
+      cell: ({ getValue }) => {
+        const level = getValue() as string;
+        const styles = levelMap[level as keyof typeof levelMap] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+        return (
+          <span className={`px-2 py-1 text-xs rounded-full ${styles.bg} ${styles.text}`}>
+            {level}
+          </span>
+        );
+      },
+    },
     createStatusColumn('status', statusMap),
     {
       accessorKey: 'area_name',
@@ -147,7 +160,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
     tableState.setErrors({});
   };
 
-  const hasAddChanges = newReader.name.trim();
+  const hasAddChanges = newReader.area_id || newReader.coach_id || newReader.enrolment_at || newReader.referrer_name || newReader.referrer_org || newReader.availability || newReader.notes;
 
   const handleAddCancel = () => {
     if (hasAddChanges) {
@@ -161,7 +174,6 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
     setShowAddConfirm(false);
     setIsAddOpen(false);
     setNewReader({ 
-      name: '', 
       area_id: null,
       coach_id: null,
       enrolment_at: null,
@@ -174,10 +186,8 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
   };
 
   const validateAddForm = () => {
-    const newErrors: Record<string, string> = {};
-    if (!newReader.name.trim()) newErrors.name = 'Name is required';
-    tableState.setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    tableState.setErrors({});
+    return true;
   };
 
   const validateEditForm = () => {
@@ -238,7 +248,6 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
     
     tableState.setIsSaving(true);
     const result = await addReader({
-      name: newReader.name,
       area_id: newReader.area_id || undefined,
       coach_id: newReader.coach_id || undefined,
       enrolment_at: newReader.enrolment_at || undefined,
@@ -250,10 +259,12 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
     
     tableState.setIsSaving(false);
     if (result.success) {
+      const responseData = result.message as { reader_id?: number; name?: string };
+      const returnedName = responseData?.name || '';
+      
       onSave({} as Reader);
       setIsAddOpen(false);
       setNewReader({ 
-        name: '', 
         area_id: null,
         coach_id: null,
         enrolment_at: null,
@@ -263,6 +274,9 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
         notes: null
       });
       tableState.setErrors({});
+      
+      setAddedReaderName(returnedName);
+      setShowSuccessDialog(true);
     } else {
       tableState.setErrorMessage(asString(result.message, 'An error occurred while adding reader'));
       tableState.setShowError(true);
@@ -345,13 +359,12 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
           <>
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>Reader ID *</label>
+                    <label className='block text-sm font-medium text-gray-700'>Reader ID</label>
                     <input
-                      className={`w-full rounded-md border p-2 ${tableState.errors.name ? 'border-red-500' : ''}`}
+                      className='w-full rounded-md border p-2 bg-gray-100'
                       value={selectedRow.name}
-                      onChange={(e) => setSelectedRow({ ...selectedRow, name: e.target.value })}
+                      readOnly
                     />
-                    {tableState.errors.name && <p className='text-red-500 text-xs mt-1'>{tableState.errors.name}</p>}
                   </div>
                   <div>
                     <label className='block text-sm font-medium text-gray-700'>Level</label>
@@ -404,7 +417,10 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
 
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>Coach</label>
+                    <label className='block text-sm font-medium text-gray-700'>
+                      Coach
+                      <HoverHelp text='Select a Coach to work with the Reader. Within the dropdown list, each Coach name is followed in brackets by their respective Coordinator name. An asterisk beside the Coach name indicates that the Coach is already assigned to at least one other Reader. Only trained Coaches are shown.' />
+                    </label>
                     <select
                       className='w-full rounded-md border p-2'
                       value={selectedRow.coach_id ?? ''}
@@ -657,16 +673,6 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
         isSaving={tableState.isSaving}
       >
         <>
-              <div>
-                <label className='block text-sm font-medium text-gray-700'>Reader ID *</label>
-                <input
-                  className={`w-full rounded-md border p-2 ${tableState.errors.name ? 'border-red-500' : ''}`}
-                  value={newReader.name}
-                  onChange={(e) => setNewReader({ ...newReader, name: e.target.value })}
-                />
-                {tableState.errors.name && <p className='text-red-500 text-xs mt-1'>{tableState.errors.name}</p>}
-              </div>
-              
               <div className='grid grid-cols-2 gap-3'>
                 <div>
                   <label className='block text-sm font-medium text-gray-700'>Area</label>
@@ -695,7 +701,10 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Coach</label>
+                <label className='block text-sm font-medium text-gray-700'>
+                  Coach
+                  <HoverHelp text='Select a Coach to work with the Reader. Within the dropdown list, each Coach name is followed in brackets by their respective Coordinator name. An asterisk beside the Coach name indicates that the Coach is already assigned to at least one other Reader. Only trained Coaches are shown.' />
+                </label>
                 <select
                   className='w-full rounded-md border p-2'
                   value={newReader.coach_id ?? ''}
@@ -770,6 +779,13 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
         onClose={() => tableState.setShowError(false)}
         title='Error'
         message={tableState.errorMessage}
+      />
+
+      <MessageDialog
+        isOpen={showSuccessDialog}
+        onClose={() => setShowSuccessDialog(false)}
+        title='Reader Added Successfully'
+        message={`Reader "${addedReaderName}" has been added successfully.`}
       />
 
       {tableState.isSaving && <Loading />}

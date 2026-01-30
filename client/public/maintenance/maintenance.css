@@ -1,0 +1,68 @@
+/* Reset / base */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  color: #212529;
+}
+
+/* Card */
+.maintenance-card {
+  max-width: 520px;
+  width: 100%;
+  background: #ffffff;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .maintenance-card {
+    padding: 3rem;
+  }
+}
+
+/* Icon */
+.icon-circle {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 1.5rem;
+  border-radius: 50%;
+  background: #0d6efd;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+/* Typography */
+h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+}
+
+p {
+  margin: 0 0 1.5rem;
+  color: #6c757d;
+  line-height: 1.5;
+}
+
+/* Alert */
+.alert {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  font-size: 0.95rem;
+}

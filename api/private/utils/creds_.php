@@ -7,15 +7,12 @@ require_once 'config.php';
 # ------------------------------------------------------------------------------
 # Crypto values.
 # 'JWT'- Key for signing of JWT tokens.
-# 'EMAIL_SALT' - Salt value used in generation of email verification tokens.
 
 if ((ENVIRONMENT === DEV) || (ENVIRONMENT === TEST)) {
        define('JWT_KEY', '');
-       define('EMAIL_SALT', '');   
        define('DATA_ENCRYPTION_KEY', '');
 } else if (ENVIRONMENT === PROD) {
        define('JWT_KEY', '');
-       define('EMAIL_SALT', '');
        define('DATA_ENCRYPTION_KEY', '');
 } else {
        die('Invalid environment');

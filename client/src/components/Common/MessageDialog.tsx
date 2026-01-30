@@ -4,15 +4,14 @@ import Button from './Button';
 
 // -----------------------------------------------------------------------------
 
-interface ConfirmDialogProps {
+interface MessageDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
   title: string;
   message: string;
 }
 
-export default function ConfirmDialog({ isOpen, onClose, onConfirm, title, message }: ConfirmDialogProps): React.JSX.Element {
+export default function MessageDialog({ isOpen, onClose, title, message }: MessageDialogProps): React.JSX.Element {
   return (
     <Dialog open={isOpen} onClose={() => {}} className='relative z-50'>
       <div className='fixed inset-0 bg-black/30' aria-hidden='true' />
@@ -20,12 +19,9 @@ export default function ConfirmDialog({ isOpen, onClose, onConfirm, title, messa
         <DialogPanel className='w-full max-w-sm rounded-xl bg-white p-6 shadow-lg'>
           <DialogTitle className='text-lg font-semibold mb-2'>{title}</DialogTitle>
           <p className='text-sm text-gray-600 mb-4'>{message}</p>
-          <div className='flex justify-end gap-2'>
-            <Button variant='secondary' type='button' onClick={onClose}>
-              No
-            </Button>
-            <Button type='button' onClick={onConfirm}>
-              Yes
+          <div className='flex justify-end'>
+            <Button type='button' onClick={onClose}>
+              OK
             </Button>
           </div>
         </DialogPanel>

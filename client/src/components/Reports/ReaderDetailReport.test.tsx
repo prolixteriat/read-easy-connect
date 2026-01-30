@@ -1,33 +1,33 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import ReadersDetailReport from './ReadersDetailReport';
+import ReaderDetailReport from './ReaderDetailReport';
 
 // -----------------------------------------------------------------------------
-// Mock the useReadersDetail hook
+// Mock the useReaderDetail hook
 vi.mock('@hooks/useReports', () => ({
-  useReadersDetail: vi.fn(),
+  useReaderDetail: vi.fn(),
 }));
 
 // Mock lazy loaded components
 vi.mock('@lib/lazy', () => ({
-  ReadersDetailChart: vi.fn(({ filteredData }) => (
-    <div data-testid="readers-detail-chart">Chart: {filteredData?.length || 0} readers</div>
+  ReaderDetailChart: vi.fn(({ filteredData }) => (
+    <div data-testid="reader-detail-chart">Chart: {filteredData?.length || 0} readers</div>
   )),
-  ReadersCoordsChart: vi.fn(({ filteredData }) => (
-    <div data-testid="readers-coords-chart">Coords Chart: {filteredData?.length || 0} readers</div>
+  ReaderCoordsChart: vi.fn(({ filteredData }) => (
+    <div data-testid="reader-coords-chart">Coords Chart: {filteredData?.length || 0} readers</div>
   )),
 }));
 
 // Mock child components
-vi.mock('./ReadersDetailTable', () => ({
+vi.mock('./ReaderDetailTable', () => ({
   default: vi.fn(({ filteredData }) => (
-    <div data-testid="readers-detail-table">Table: {filteredData?.length || 0} readers</div>
+    <div data-testid="reader-detail-table">Table: {filteredData?.length || 0} readers</div>
   )),
 }));
 
-vi.mock('./ReadersStatusFilter', () => ({
+vi.mock('./ReaderStatusFilter', () => ({
   default: vi.fn(({ selectedStatuses, onStatusChange }) => (
-    <div data-testid="readers-status-filter">
+    <div data-testid="reader-status-filter">
       <div data-testid="selected-statuses">{selectedStatuses.join(',')}</div>
       <button onClick={() => onStatusChange(['S', 'P'])} data-testid="change-status">Change Status</button>
     </div>
@@ -40,7 +40,7 @@ vi.mock('@components/Common', () => ({
 }));
 // -----------------------------------------------------------------------------
 
-import { useReadersDetail } from '@hooks/useReports';
+import { useReaderDetail } from '@hooks/useReports';
 
 const mockReadersData = [
   { area_id: 1, area_name: 'North Area', coordinator_id: 1, coordinator_name: 'John Coordinator', reader_id: 1, reader_name: 'Reader One', reader_level: 'TP1', reader_status: 'S', reader_notes: null, TP1: 1, TP2: 0, TP3: 0, TP4: 0, TP5: 0 },
@@ -50,7 +50,7 @@ const mockReadersData = [
 ];
 // -----------------------------------------------------------------------------
 
-describe('ReadersDetailReport', () => {
+describe('ReaderDetailReport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Mock localStorage
@@ -62,41 +62,41 @@ describe('ReadersDetailReport', () => {
   });
 
   it('renders loading state', () => {
-    vi.mocked(useReadersDetail).mockReturnValue({
+    vi.mocked(useReaderDetail).mockReturnValue({
       data: undefined,
       error: undefined,
       isLoading: true,
       mutate: vi.fn(),
     });
 
-    render(<ReadersDetailReport />);
+    render(<ReaderDetailReport />);
     expect(screen.getByTestId('loading')).toBeInTheDocument();
   });
 
   it('renders all components when not loading', () => {
-    vi.mocked(useReadersDetail).mockReturnValue({
+    vi.mocked(useReaderDetail).mockReturnValue({
       data: mockReadersData,
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),
     });
 
-    render(<ReadersDetailReport />);
-    expect(screen.getByTestId('readers-status-filter')).toBeInTheDocument();
-    expect(screen.getByTestId('readers-detail-table')).toBeInTheDocument();
-    expect(screen.getByTestId('readers-detail-chart')).toBeInTheDocument();
-    expect(screen.getByTestId('readers-coords-chart')).toBeInTheDocument();
+    render(<ReaderDetailReport />);
+    expect(screen.getByTestId('reader-status-filter')).toBeInTheDocument();
+    expect(screen.getByTestId('reader-detail-table')).toBeInTheDocument();
+    expect(screen.getByTestId('reader-detail-chart')).toBeInTheDocument();
+    expect(screen.getByTestId('reader-coords-chart')).toBeInTheDocument();
   });
 
   it('filters data correctly by default', () => {
-    vi.mocked(useReadersDetail).mockReturnValue({
+    vi.mocked(useReaderDetail).mockReturnValue({
       data: mockReadersData,
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),
     });
 
-    render(<ReadersDetailReport />);
+    render(<ReaderDetailReport />);
     // Should filter out null reader_id entries, so 3 readers remain
     expect(screen.getByText('Table: 3 readers')).toBeInTheDocument();
     expect(screen.getByText('Chart: 3 readers')).toBeInTheDocument();
@@ -104,14 +104,14 @@ describe('ReadersDetailReport', () => {
   });
 
   it('updates filtered data when status changes', async () => {
-    vi.mocked(useReadersDetail).mockReturnValue({
+    vi.mocked(useReaderDetail).mockReturnValue({
       data: mockReadersData,
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),
     });
 
-    render(<ReadersDetailReport />);
+    render(<ReaderDetailReport />);
     
     const changeStatusButton = screen.getByTestId('change-status');
     changeStatusButton.click();
@@ -125,28 +125,28 @@ describe('ReadersDetailReport', () => {
   });
 
   it('initializes with default statuses', () => {
-    vi.mocked(useReadersDetail).mockReturnValue({
+    vi.mocked(useReaderDetail).mockReturnValue({
       data: mockReadersData,
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),
     });
 
-    render(<ReadersDetailReport />);
+    render(<ReaderDetailReport />);
     expect(screen.getByTestId('selected-statuses')).toHaveTextContent('NYS,S,P,DO,G,C');
   });
 
   it('saves status changes to localStorage', async () => {
     const setItemSpy = vi.spyOn(localStorage, 'setItem');
     
-    vi.mocked(useReadersDetail).mockReturnValue({
+    vi.mocked(useReaderDetail).mockReturnValue({
       data: mockReadersData,
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),
     });
 
-    render(<ReadersDetailReport />);
+    render(<ReaderDetailReport />);
     
     const changeStatusButton = screen.getByTestId('change-status');
     changeStatusButton.click();
@@ -157,14 +157,14 @@ describe('ReadersDetailReport', () => {
   });
 
   it('handles empty data gracefully', () => {
-    vi.mocked(useReadersDetail).mockReturnValue({
+    vi.mocked(useReaderDetail).mockReturnValue({
       data: [],
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),
     });
 
-    render(<ReadersDetailReport />);
+    render(<ReaderDetailReport />);
     expect(screen.getByText('Table: 0 readers')).toBeInTheDocument();
     expect(screen.getByText('Chart: 0 readers')).toBeInTheDocument();
     expect(screen.getByText('Coords Chart: 0 readers')).toBeInTheDocument();

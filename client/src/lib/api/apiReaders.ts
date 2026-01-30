@@ -37,7 +37,7 @@ const EditReaderSchema = z.object({
 export type TEditReaderData = z.TypeOf<typeof EditReaderSchema>;
 
 const AddReaderSchema = z.object({
-    name: z.string(),
+    // name: z.string(),
     area_id: z.number().optional(),
     coach_id: z.number().optional(),
     enrolment_at: z.string().nullable().optional(),

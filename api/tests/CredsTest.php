@@ -44,7 +44,6 @@ final class CredsTest extends TestCase {
     
     public function test_has_creds_other(): void {
         $ok = (strlen(JWT_KEY) > 0) and
-              (strlen(EMAIL_SALT) > 0) and 
               (strlen(DATA_ENCRYPTION_KEY) > 0) and 
               (strlen(ENVIRONMENT) > 0);
         $this->assertTrue($ok);

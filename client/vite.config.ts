@@ -21,8 +21,44 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      manifest: false, 
-    })    
+      manifest: {
+        name: 'Read Easy Connect',
+        short_name: 'ReadEasy',
+        description: 'Read Easy Connect Application',
+        theme_color: '#ffffff',
+        icons: [
+          {
+            src: 'pwa/android-chrome-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa/android-chrome-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          }
+        ]
+      },
+      workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/.*\.(js|css|html|png|jpg|jpeg|svg|ico)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'static-resources'
+            }
+          }
+        ]
+      },
+      devOptions: {
+        enabled: false
+      },
+      injectRegister: 'script',
+      strategies: 'generateSW'
+    })
   ],
 
   test: {

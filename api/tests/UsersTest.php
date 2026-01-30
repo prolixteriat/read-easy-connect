@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------
 
 require_once __DIR__ . '/tst/TstDbUsers.php';
-require_once __DIR__ . '/utils/creds.php';
+require_once __DIR__ . '/tst/TstDbBase.php';
 require_once __DIR__ . '/../private/db/DbLogin.php';
 
 # ------------------------------------------------------------------------------
@@ -19,19 +19,19 @@ class UsersTest extends TestCase {
 
     protected Slim\App $app;
     protected TstDbUsers $db;
+    protected TstDbBase $base;
     protected string $jwt_token;
     protected ServerRequestFactory $request_factory;
     protected StreamFactory $stream_factory;
-    protected array $tokens;
 
     # --------------------------------------------------------------------------
 
     protected function setUp(): void {
         
-        $this->tokens = TestTokens::get();
+        $this->base = new TstDbBase();
         $this->db = new TstDbUsers();
         $this->app = AppFactory::create();
-        $this->jwt_token = $this->tokens['manager']; 
+        $this->jwt_token = $this->base->test_manager_jwt; 
         $this->request_factory = new ServerRequestFactory();
         $this->stream_factory = new StreamFactory();
 
@@ -39,15 +39,20 @@ class UsersTest extends TestCase {
     }
     # --------------------------------------------------------------------------
 
+    protected function tearDown(): void {
+        $this->base->cleanup();
+    }
+    # --------------------------------------------------------------------------
+
     public function test_add_user(): void {
 
         $payload = ['first_name' => 'Unit', 
                     'last_name' => 'Test', 
-                    'email' => 'unittest',
+                    'email' => 'unittest@example.com',
                     'role' => 'coach',
-                    'coordinator_id' => '4'];
+                    'coordinator_id' => $this->base->test_coordinator_id];
         try {
-            $this->jwt_token = $this->tokens['coordinator'];
+            $this->jwt_token = $this->base->test_coordinator_jwt;
             $request = $this->create_request('POST', '/users/add-user', $payload);
             $response = $this->app->handle($request);
             $this->assertEquals(200, $response->getStatusCode());
@@ -66,7 +71,7 @@ class UsersTest extends TestCase {
         try {
             # This test would require setting up MFA prerequisites
             # For now, just test the endpoint exists and handles missing params
-            $this->jwt_token = $this->tokens['coordinator'];
+            $this->jwt_token = $this->base->test_coordinator_jwt;
             $payload = ['email' => $test_email];
             $request = $this->create_request('POST', '/users/complete-mfa-setup', 
                                             $payload);
@@ -84,13 +89,13 @@ class UsersTest extends TestCase {
         $test_email = 'testreset@test.com';
         try {
             # Add a test user first
-            $this->jwt_token = $this->tokens['coordinator'];
+            $this->jwt_token = $this->base->test_coordinator_jwt;
             $add_payload = [
                 'first_name' => 'Test',
                 'last_name' => 'Reset',
                 'email' => $test_email,
                 'role' => 'coach',
-                'coordinator_id' => '5'
+                'coordinator_id' => $this->base->test_coordinator_id
             ];
             $add_request = $this->create_request('POST', '/users/add-user', 
                                                 $add_payload);
@@ -115,7 +120,7 @@ class UsersTest extends TestCase {
         $test_email = 'testedituser@test.com';
         $user_id = null;
         try {
-            $this->jwt_token = $this->tokens['coordinator'];
+            $this->jwt_token = $this->base->test_coordinator_jwt;
             
             # Add new test user
             $add_payload = [
@@ -123,7 +128,7 @@ class UsersTest extends TestCase {
                 'last_name' => 'TestUser',
                 'email' => $test_email,
                 'role' => 'coach',
-                'coordinator_id' => '5'
+                'coordinator_id' => $this->base->test_coordinator_id
             ];
             $add_request = $this->create_request('POST', '/users/add-user', 
                                                 $add_payload);
@@ -176,13 +181,13 @@ class UsersTest extends TestCase {
         $test_email = 'testresetform@test.com';
         try {
             # Add test user
-            $this->jwt_token = $this->tokens['coordinator'];
+            $this->jwt_token = $this->base->test_coordinator_jwt;
             $add_payload = [
                 'first_name' => 'Test',
                 'last_name' => 'ResetForm',
                 'email' => $test_email,
                 'role' => 'coach',
-                'coordinator_id' => '5'
+                'coordinator_id' => $this->base->test_coordinator_id
             ];
             $add_request = $this->create_request('POST', '/users/add-user', 
                                                 $add_payload);
@@ -223,7 +228,7 @@ class UsersTest extends TestCase {
     # --------------------------------------------------------------------------
 
     public function test_get_users(): void {
-        $this->jwt_token = $this->tokens['coordinator'];
+        $this->jwt_token = $this->base->test_coordinator_jwt;
         $request = $this->create_request('GET', '/users/get-users');
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());
@@ -248,13 +253,13 @@ class UsersTest extends TestCase {
         $test_email = 'testloginreset@test.com';
         try {
             # Add test user
-            $this->jwt_token = $this->tokens['coordinator'];
+            $this->jwt_token = $this->base->test_coordinator_jwt;
             $add_payload = [
                 'first_name' => 'Test',
                 'last_name' => 'LoginReset',
                 'email' => $test_email,
                 'role' => 'coach',
-                'coordinator_id' => '5'
+                'coordinator_id' => $this->base->test_coordinator_id
             ];
             $add_request = $this->create_request('POST', '/users/add-user', $add_payload);
             $add_response = $this->app->handle($add_request);
@@ -281,7 +286,7 @@ class UsersTest extends TestCase {
     # --------------------------------------------------------------------------
 
     public function test_edit_profile(): void {
-        $this->jwt_token = $this->tokens['coordinator'];
+        $this->jwt_token = $this->base->test_coordinator_jwt;
         
         # Get original user data
         $get_request = $this->create_request('GET', '/users/get-users');
@@ -292,7 +297,7 @@ class UsersTest extends TestCase {
         # Find current user (coordinator should be in the list)
         $current_user = null;
         foreach ($users as $user) {
-            if ($user['role'] === 'coordinator') {
+            if ($user['user_id'] === $this->base->test_coordinator_id) {
                 $current_user = $user;
                 break;
             }

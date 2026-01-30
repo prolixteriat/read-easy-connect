@@ -15,8 +15,13 @@ import { environment, initConfig } from '@lib/config';
 // -----------------------------------------------------------------------------
 
 function AppRoutes(): React.JSX.Element {
-  const { role } = useAuth();
+  const { role, loading } = useAuth();
   initConfig(environment);
+  
+  if (loading) {
+    return <Loading />;
+  }
+  
   return (
     <Routes>
       <Route path='/' element={

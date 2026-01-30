@@ -14,7 +14,16 @@ class TstDbCoaches extends DbCoaches {
     
     public function test_delete(string $email): bool {
         try {
-            $user_id = $this->get_user_id($email);
+            # Check if user exists first
+            $stmt = $this->conn->prepare('SELECT user_id FROM users WHERE email = :email');
+            $stmt->execute([':email' => $email]);
+            $user_id = $stmt->fetchColumn();
+            
+            if (!$user_id) {
+                # User doesn't exist, nothing to delete
+                return true;
+            }
+            
             $this->conn->beginTransaction();
             $queries = [
                 'DELETE FROM audit WHERE performed_on_id = :user_id',
@@ -29,7 +38,9 @@ class TstDbCoaches extends DbCoaches {
             return true;
 
         } catch (Exception $e) {
-            $this->conn->rollBack();
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollBack();
+            }
             $this->logger->error('test_delete failed: ' . $e->getMessage());
             return false;
         }         

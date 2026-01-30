@@ -6,9 +6,9 @@ import { lazy } from 'react';
 export const ReviewsCalendar = lazy(() => import('@components/Calendars/ReviewsCalendar'));
 
 // Charts
-export const CoachesSummaryChart = lazy(() => import('@components/Charts/CoachesSummaryChart'));
-export const ReadersDetailChart = lazy(() => import('@components/Charts/ReadersDetailChart'));
-export const ReadersCoordsChart = lazy(() => import('@components/Charts/ReadersCoordsChart'));
+export const CoachDetailChart = lazy(() => import('@components/Charts/CoachDetailChart'));
+export const ReaderDetailChart = lazy(() => import('@components/Charts/ReaderDetailChart'));
+export const ReaderCoordsChart = lazy(() => import('@components/Charts/ReaderCoordsChart'));
 
 // Misc
 export const TextPage = lazy(() => import('@components/Misc/TextPage/TextPage'));
@@ -19,8 +19,8 @@ export const Login = lazy(() => import('@components/Profile/Login'));
 
 // Reports
 export const AuditReport = lazy(() => import('@components/Reports/AuditReport'));
-export const CoachesSummaryReport = lazy(() => import('@components/Reports/CoachesSummaryReport'));
-export const ReadersDetailReport = lazy(() => import('@components/Reports/ReadersDetailReport'));
+export const CoachDetailReport = lazy(() => import('@components/Reports/CoachDetailReport'));
+export const ReaderDetailReport = lazy(() => import('@components/Reports/ReaderDetailReport'));
 export const ReviewsReport = lazy(() => import('@components/Reports/ReviewsReport'));
 
 // Tables
@@ -29,6 +29,7 @@ export const CoachesTable = lazy(() => import('@components/Tables/CoachesTable/C
 export const Dashboard = lazy(() => import('@components/Tables/Dashboard/Dashboard'));
 export const LoansTable = lazy(() => import('@components/Tables/LoansTable/LoansTable'));
 export const ReadersTable = lazy(() => import('@components/Tables/ReadersTable/ReadersTable'));
+export const TrainingTable = lazy(() => import('@components/Tables/TrainingTable/TrainingTable'));
 export const UsersTable = lazy(() => import('@components/Tables/UsersTable/UsersTable'));
 export const VenuesTable = lazy(() => import('@components/Tables/VenuesTable/VenuesTable'));
 

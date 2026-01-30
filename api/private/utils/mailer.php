@@ -3,7 +3,6 @@
 # ------------------------------------------------------------------------------
 
 require_once 'creds.php';
-# require_once 'helper.php';
 
 # ------------------------------------------------------------------------------
 
@@ -129,7 +128,7 @@ class Mailer {
             is a legally independent local organisation, affiliated to Read Easy 
             UK (Registered charity no. 1151288). Read Easy takes the protection 
             of your data very seriously. Full details of how we hold and use 
-            personal data are provided in Read Easy’s Data Protection Notice on
+            personal data are provided in Read Easy's Data Protection Notice on
              our <a href='https://readeasy.org.uk/privacy-policy/'>website</a>.</i></p>";
 
         return $footer;

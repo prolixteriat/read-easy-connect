@@ -318,7 +318,14 @@ class DbOrg extends DbBase {
             $query = 'UPDATE regions SET ' . implode(', ', $updates) . 
                      ' WHERE region_id = :region_id';
             $stmt = $this->conn->prepare($query);
-            $stmt->execute($params);
+            if (!$stmt) {
+                throw new Exception('Failed to prepare region update query');
+            }
+            
+            $result = $stmt->execute($params);
+            if (!$result) {
+                throw new Exception('Failed to execute region update query');
+            }
             
             $status = new Status(true, 200, ['message' => 'Region updated successfully']);
         } catch (Exception $e) {
@@ -401,7 +408,14 @@ class DbOrg extends DbBase {
             $query = 'UPDATE venues SET ' . implode(', ', $updates) . 
                      ' WHERE venue_id = :venue_id';
             $stmt = $this->conn->prepare($query);
-            $stmt->execute($params);
+            if (!$stmt) {
+                throw new Exception('Failed to prepare venue update query');
+            }
+            
+            $result = $stmt->execute($params);
+            if (!$result) {
+                throw new Exception('Failed to execute venue update query');
+            }
             
             $this->add_audit(AuditType::OTHER, "Venue updated: ID {$data['venue_id']}", 
                             $this->user_id, $manager_affiliate_id);
@@ -503,12 +517,12 @@ class DbOrg extends DbBase {
         return $status;
     }
     # --------------------------------------------------------------------------
-    # Role: manager, coordinator
+    # Role: manager, coordinator, 'viewer'
     # Mandatory: n/a
     # Optional : n/a
 
     public function get_venues(Request $request): Status {
-        $status = $this->validate_token($request, ['manager', 'coordinator']);
+        $status = $this->validate_token($request, ['manager', 'coordinator', 'viewer']);
         if (!$status->success) { 
             return $status; 
         }
@@ -531,9 +545,16 @@ class DbOrg extends DbBase {
             
             # Decrypt contact fields
             foreach ($venues as &$venue) {
-                $venue['contact_name'] = $this->decrypt_field($venue['contact_name']);
-                $venue['contact_email'] = $this->decrypt_field($venue['contact_email']);
-                $venue['contact_telephone'] = $this->decrypt_field($venue['contact_telephone']);
+                try {
+                    $venue['contact_name'] = $this->decrypt_field($venue['contact_name']);
+                    $venue['contact_email'] = $this->decrypt_field($venue['contact_email']);
+                    $venue['contact_telephone'] = $this->decrypt_field($venue['contact_telephone']);
+                } catch (Exception $e) {
+                    $this->logger->error('get_venues decryption failed: ' . $e->getMessage());
+                    $venue['contact_name'] = null;
+                    $venue['contact_email'] = null;
+                    $venue['contact_telephone'] = null;
+                }
             }
             
             $status = new Status(true, 200, $venues);

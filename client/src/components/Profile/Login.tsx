@@ -110,7 +110,7 @@ export default function Login({ isOpen, onClose }: LoginProps): React.JSX.Elemen
 
   return (
     <>
-      <Dialog open={isOpen} onClose={handleClose} className='relative z-50'>
+      <Dialog open={isOpen} onClose={() => {}} className='relative z-50'>
         <div className='fixed inset-0 bg-black/30' aria-hidden='true' />
         <div className='fixed inset-0 flex items-center justify-center p-4'>
           <DialogPanel className='w-full max-w-md rounded-xl bg-white p-6 shadow-lg'>
@@ -189,7 +189,7 @@ export default function Login({ isOpen, onClose }: LoginProps): React.JSX.Elemen
         </div>
       </Dialog>
 
-      <Dialog open={showMfa} onClose={() => setShowMfa(false)} className='relative z-50'>
+      <Dialog open={showMfa} onClose={() => {}} className='relative z-50'>
         <div className='fixed inset-0 bg-black/30' aria-hidden='true' />
         <div className='fixed inset-0 flex items-center justify-center p-4'>
           <DialogPanel className='w-full max-w-md rounded-xl bg-white p-6 shadow-lg'>
@@ -236,7 +236,7 @@ export default function Login({ isOpen, onClose }: LoginProps): React.JSX.Elemen
         </div>
       </Dialog>
 
-      <Dialog open={showForgotPassword} onClose={handleForgotPasswordClose} className='relative z-50'>
+      <Dialog open={showForgotPassword} onClose={() => {}} className='relative z-50'>
         <div className='fixed inset-0 bg-black/30' aria-hidden='true' />
         <div className='fixed inset-0 flex items-center justify-center p-4'>
           <DialogPanel className='w-full max-w-md rounded-xl bg-white p-6 shadow-lg'>
@@ -301,7 +301,8 @@ export default function Login({ isOpen, onClose }: LoginProps): React.JSX.Elemen
           onClose();
         }}
         title='Success'
-        message='Check your email for a link to reset your password'
+        message='If you entered a recognised email address, you will be sent 
+                 an email with a link to reset your password'
       />
       
       {(isLoggingIn || isResetting) && <Loading />}

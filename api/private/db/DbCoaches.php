@@ -22,9 +22,9 @@ class DbCoaches extends DbBase {
     # Mandatory: first_name, last_name, email
     # Optional: coordinator_id, address, telephone, nok_name, nok_telephone, 
     #    nok_relationship, area_id, status, email_consent, whatsapp_consent, 
-    #    dbs_completed, ref_completed, commitment_completed, training_booked, 
-    #    edib_train_completed, consol_train_completed, availability, preferences, 
-    #    notes
+    #    dbs_completed, ref_completed, commitment_completed, training, 
+    #    edib_training, consol_training, consol_training_at, availability, 
+    #    preferences, notes
     
     public function add_coach(Request $request): Status {
         try {
@@ -45,6 +45,15 @@ class DbCoaches extends DbBase {
                                         $this->role);
             if (!$caller_affiliate_id) {
                 return new Status(false, 403, ['message' => 'Unable to determine caller affiliate']);
+            }
+            
+            # Check preconditions when setting coach status
+            $status_value = $params['status'] ?? 'unchecked';
+            if ($status_value !== 'unchecked') {
+                $status_check = $this->validate_coach_status(null, $status_value, $params);
+                if (!$status_check->success) {
+                    return $status_check;
+                }
             }
             
             # Create user record using DbUsers::add_user
@@ -81,18 +90,21 @@ class DbCoaches extends DbBase {
                         status = :status,
                         email_consent = :email_consent,
                         whatsapp_consent = :whatsapp_consent,
+                        use_email = :use_email,
                         dbs_completed = :dbs_completed,
                         ref_completed = :ref_completed,
                         commitment_completed = :commitment_completed,
-                        training_booked = :training_booked,
-                        edib_train_completed = :edib_train_completed,
-                        consol_train_completed = :consol_train_completed,
+                        training = :training,
+                        edib_training = :edib_training,
+                        consol_training = :consol_training,
+                        consol_training_at = :consol_training_at,
                         availability = :availability,
                         preferences = :preferences,
                         notes = :notes
                     WHERE coach_id = :coach_id';
             
             $stmt = $this->conn->prepare($sql);
+            
             $stmt->execute([
                 ':coach_id' => $coach_id,
                 ':address' => $this->encrypt_field($params['address'] ?? null),
@@ -101,15 +113,17 @@ class DbCoaches extends DbBase {
                 ':nok_telephone' => $this->encrypt_field($params['nok_telephone'] ?? null),
                 ':nok_relationship' => $this->encrypt_field($params['nok_relationship'] ?? null),
                 ':area_id' => $params['area_id'] ?? null,
-                ':status' => $params['status'] ?? 'unchecked',
+                ':status' => $status_value,
                 ':email_consent' => $params['email_consent'] ?? false,
                 ':whatsapp_consent' => $params['whatsapp_consent'] ?? false,
+                ':use_email' => $params['use_email'] ?? false,
                 ':dbs_completed' => $params['dbs_completed'] ?? false,
                 ':ref_completed' => $params['ref_completed'] ?? false,
                 ':commitment_completed' => $params['commitment_completed'] ?? false,
-                ':training_booked' => $params['training_booked'] ?? false,
-                ':edib_train_completed' => $params['edib_train_completed'] ?? false,
-                ':consol_train_completed' => $params['consol_train_completed'] ?? false,
+                ':training' => $params['training'] ?? 'not_booked',
+                ':edib_training' => $params['edib_training'] ?? 'not_booked',
+                ':consol_training' => $params['consol_training'] ?? 'not_booked',
+                ':consol_training_at' => $params['consol_training_at'] ?? null,
                 ':availability' => $params['availability'] ?? null,
                 ':preferences' => $params['preferences'] ?? null,
                 ':notes' => $params['notes'] ?? null
@@ -118,8 +132,6 @@ class DbCoaches extends DbBase {
             $status = new Status(true, 200, 
                     ['user_id' => $coach_id]);
             $description = "Coach added: {$params['email']}";
-            $this->add_audit(AuditType::COACH_ADDED, $description, $this->user_id, 
-                    $caller_affiliate_id, $coach_id);
         } 
         catch (Exception $e) {
             $this->logger->error('add_coach: ' . $e->getMessage());
@@ -146,6 +158,11 @@ class DbCoaches extends DbBase {
             $status = $this->validate_params($params, $required_params);
             if (!$status->success) { 
                 return $status; 
+            }
+            
+            # Validate coach_id is numeric and positive
+            if (!is_numeric($params['coach_id']) || $params['coach_id'] <= 0) {
+                return new Status(false, 400, ['message' => 'Invalid coach_id']);
             }
             
             $coach_id = (int)$params['coach_id'];
@@ -191,50 +208,11 @@ class DbCoaches extends DbBase {
                 }
             }
             
-            # Check preconditions when setting coach status to 'trained'
+            # Check preconditions when setting coach status
             if (isset($params['status'])) {
-                # Get current values from database
-                $sql_current = 'SELECT c.dbs_completed, c.ref_completed, c.commitment_completed, 
-                                       c.edib_train_completed, c.consol_train_completed, u.status as user_status
-                                FROM coaches c
-                                JOIN users u ON c.coach_id = u.user_id
-                                WHERE c.coach_id = :coach_id';
-                $stmt_current = $this->conn->prepare($sql_current);
-                $stmt_current->execute([':coach_id' => $coach_id]);
-                $current = $stmt_current->fetch(PDO::FETCH_ASSOC);
-                
-                if (!$current) {
-                    return new Status(false, 404, ['message' => 'Coach not found']);
-                }
-                
-                # Check values from params or current database values
-                $dbs_completed = $params['dbs_completed'] ?? $current['dbs_completed'];
-                $ref_completed = $params['ref_completed'] ?? $current['ref_completed'];
-                $commitment_completed = $params['commitment_completed'] ?? $current['commitment_completed'];
-                $edib_train_completed = $params['edib_train_completed'] ?? $current['edib_train_completed'];
-                $consol_train_completed = $params['consol_train_completed'] ?? $current['consol_train_completed'];
-                $user_status = $params['user_status'] ?? $current['user_status'];
-                
-                if ($params['status'] === 'untrained') {
-                    if (!$dbs_completed || !$ref_completed || $user_status === 'leaver') {
-                        return new Status(false, 403, 
-                            ['message' => 'Coach does not meet requirements to be set as untrained. ' .
-                            'Ensure DBS check and references are completed and user is not a leaver.']);
-                    }
-                } elseif ($params['status'] === 'trained') {
-                    if (!$dbs_completed || !$ref_completed || !$commitment_completed || 
-                        !$edib_train_completed || $user_status === 'leaver') {
-                        return new Status(false, 403, 
-                            ['message' => 'Coach does not meet requirements to be set as trained. ' .
-                            'Ensure all checks and training are completed and user is not a leaver.']);
-                    }
-                } elseif ($params['status'] === 'paired') {
-                    if (!$dbs_completed || !$ref_completed || !$commitment_completed || 
-                        !$edib_train_completed || !$consol_train_completed || $user_status === 'leaver') {
-                        return new Status(false, 403, 
-                            ['message' => 'Coach does not meet requirements to be set as paired. ' .
-                            'Ensure all checks and training are completed and user is not a leaver.']);
-                    }
+                $status_check = $this->validate_coach_status($coach_id, $params['status'], $params);
+                if (!$status_check->success) {
+                    return $status_check;
                 }
             }
             
@@ -291,6 +269,11 @@ class DbCoaches extends DbBase {
                 $stmt->execute([':whatsapp_consent' => $params['whatsapp_consent'], ':coach_id' => $coach_id]);
                 $has_coach_updates = true;
             }
+            if (isset($params['use_email'])) {
+                $stmt = $this->conn->prepare('UPDATE coaches SET use_email = :use_email WHERE coach_id = :coach_id');
+                $stmt->execute([':use_email' => $params['use_email'], ':coach_id' => $coach_id]);
+                $has_coach_updates = true;
+            }
             if (isset($params['dbs_completed'])) {
                 $stmt = $this->conn->prepare('UPDATE coaches SET dbs_completed = :dbs_completed WHERE coach_id = :coach_id');
                 $stmt->execute([':dbs_completed' => $params['dbs_completed'], ':coach_id' => $coach_id]);
@@ -306,19 +289,24 @@ class DbCoaches extends DbBase {
                 $stmt->execute([':commitment_completed' => $params['commitment_completed'], ':coach_id' => $coach_id]);
                 $has_coach_updates = true;
             }
-            if (isset($params['training_booked'])) {
-                $stmt = $this->conn->prepare('UPDATE coaches SET training_booked = :training_booked WHERE coach_id = :coach_id');
-                $stmt->execute([':training_booked' => $params['training_booked'], ':coach_id' => $coach_id]);
+            if (isset($params['training'])) {
+                $stmt = $this->conn->prepare('UPDATE coaches SET training = :training WHERE coach_id = :coach_id');
+                $stmt->execute([':training' => $params['training'], ':coach_id' => $coach_id]);
                 $has_coach_updates = true;
             }
-            if (isset($params['edib_train_completed'])) {
-                $stmt = $this->conn->prepare('UPDATE coaches SET edib_train_completed = :edib_train_completed WHERE coach_id = :coach_id');
-                $stmt->execute([':edib_train_completed' => $params['edib_train_completed'], ':coach_id' => $coach_id]);
+            if (isset($params['edib_training'])) {
+                $stmt = $this->conn->prepare('UPDATE coaches SET edib_training = :edib_training WHERE coach_id = :coach_id');
+                $stmt->execute([':edib_training' => $params['edib_training'], ':coach_id' => $coach_id]);
                 $has_coach_updates = true;
             }
-            if (isset($params['consol_train_completed'])) {
-                $stmt = $this->conn->prepare('UPDATE coaches SET consol_train_completed = :consol_train_completed WHERE coach_id = :coach_id');
-                $stmt->execute([':consol_train_completed' => $params['consol_train_completed'], ':coach_id' => $coach_id]);
+            if (isset($params['consol_training'])) {
+                $stmt = $this->conn->prepare('UPDATE coaches SET consol_training = :consol_training WHERE coach_id = :coach_id');
+                $stmt->execute([':consol_training' => $params['consol_training'], ':coach_id' => $coach_id]);
+                $has_coach_updates = true;
+            }
+            if (isset($params['consol_training_at'])) {
+                $stmt = $this->conn->prepare('UPDATE coaches SET consol_training_at = :consol_training_at WHERE coach_id = :coach_id');
+                $stmt->execute([':consol_training_at' => $params['consol_training_at'], ':coach_id' => $coach_id]);
                 $has_coach_updates = true;
             }
             if (isset($params['availability'])) {
@@ -342,11 +330,9 @@ class DbCoaches extends DbBase {
                 $has_coach_updates = true;
             }
             
-            # Only add audit if there were actual updates
             if ($has_user_updates || $has_coach_updates) {
-                $description = "Coach edited: $coach_id";            
-                $this->add_audit(AuditType::COACH_EDITED, $description, $this->user_id, 
-                        $caller_affiliate_id, $coach_id);
+                # $description = "Coach edited: $coach_id";            
+                # $this->add_audit(AuditType::COACH_EDITED, $description, $this->user_id, $caller_affiliate_id, $coach_id);
                 $status = new Status(true, 200, ['message' => 'Coach updated successfully']);
 
             } else {
@@ -376,6 +362,11 @@ class DbCoaches extends DbBase {
             $params = $this->sanitise_array($request->getQueryParams());
             if (!isset($params['coach_id'])) {
                 return new Status(false, 400, ['message' => 'coach_id parameter required']);
+            }
+            
+            # Validate coach_id is numeric and positive
+            if (!is_numeric($params['coach_id']) || $params['coach_id'] <= 0) {
+                return new Status(false, 400, ['message' => 'Invalid coach_id']);
             }
             
             $coach_id = (int)$params['coach_id'];
@@ -448,9 +439,9 @@ class DbCoaches extends DbBase {
             
             $sql = 'SELECT c.coach_id, u.first_name, u.last_name, u.email, c.status,
                         u.status as user_status, u.disabled, u.password_reset,
-                        c.email_consent, c.whatsapp_consent, c.dbs_completed, 
-                        c.ref_completed, c.commitment_completed, c.training_booked, 
-                        c.edib_train_completed, c.consol_train_completed, 
+                        c.email_consent, c.whatsapp_consent, c.use_email, c.dbs_completed, 
+                        c.ref_completed, c.commitment_completed, c.training, 
+                        c.edib_training, c.consol_training, c.consol_training_at,
                         c.availability, c.preferences, c.notes, c.created_at, 
                         c.coordinator_id, c.area_id,
                         coord_u.first_name as coordinator_first_name, 
@@ -480,6 +471,55 @@ class DbCoaches extends DbBase {
 
     # --------------------------------------------------------------------------
     
+    private function validate_coach_status(?int $coach_id, string $status, array $params): Status {
+        $current = null;
+        
+        # Get current values from database if coach exists
+        if ($coach_id !== null) {
+            $sql_current = 'SELECT c.dbs_completed, c.ref_completed, c.commitment_completed, 
+                                   c.edib_training, c.consol_training, u.status as user_status
+                            FROM coaches c
+                            JOIN users u ON c.coach_id = u.user_id
+                            WHERE c.coach_id = :coach_id';
+            $stmt_current = $this->conn->prepare($sql_current);
+            $stmt_current->execute([':coach_id' => $coach_id]);
+            $current = $stmt_current->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$current) {
+                return new Status(false, 404, ['message' => 'Coach not found']);
+            }
+        }
+        
+        # Check values from params or current database values (defaults for new coaches)
+        $dbs_completed = $params['dbs_completed'] ?? ($current['dbs_completed'] ?? false);
+        $ref_completed = $params['ref_completed'] ?? ($current['ref_completed'] ?? false);
+        $commitment_completed = $params['commitment_completed'] ?? ($current['commitment_completed'] ?? false);
+        $edib_training = $params['edib_training'] ?? ($current['edib_training'] ?? 'not_booked');
+        $training = $params['training'] ?? ($current['training'] ?? 'not_booked');
+        
+        $check_refs_ok = $dbs_completed && $ref_completed;
+        $check_train_ok = $check_refs_ok && $commitment_completed &&
+                        $edib_training === 'completed' &&
+                        $training === 'completed';
+        
+        if ($status === 'untrained') {
+            if (!$check_refs_ok) {
+                return new Status(false, 403, 
+                    ['message' => 'Coach does not meet requirements to be set as untrained. ' .
+                    'Ensure DBS check and references are completed.']);
+            }
+        } elseif ($status === 'trained' || $status === 'paired') {
+            if (!$check_train_ok) {
+                return new Status(false, 403, 
+                    ['message' => "Coach does not meet requirements to be set as {$status}. " .
+                    'Ensure all checks and training are completed.']);
+            }
+        }
+        
+        return new Status(true, 200, ['message' => 'Status requirements validated']);
+    }
+    # --------------------------------------------------------------------------
+    
     private function get_coach_affiliate_id(int $coach_id): ?int {
         $sql = 'SELECT affiliate_id FROM coaches WHERE coach_id = :coach_id';
         
@@ -499,64 +539,22 @@ class DbCoaches extends DbBase {
                 WHERE coach_id = :coach_id';
         
         $stmt = $this->conn->prepare($sql);
-        $redacted = 'REDACTED';
+        $plain_text = 'REDACTED';
+        $redacted = $this->encrypt_field($plain_text);
         $stmt->execute([
             ':coach_id' => $coach_id,
-            ':address' => $this->encrypt_field($redacted),
-            ':telephone' => $this->encrypt_field($redacted),
-            ':nok_name' => $this->encrypt_field($redacted),
-            ':nok_telephone' => $this->encrypt_field($redacted),
-            ':nok_relationship' => $this->encrypt_field($redacted)
+            ':address' => $redacted,
+            ':telephone' => $redacted,
+            ':nok_name' => $redacted,
+            ':nok_telephone' => $redacted,
+            ':nok_relationship' => $redacted
         ]);
 
         $this->logger->info("Coach data redacted: $coach_id");
     }
-    # --------------------------------------------------------------------------
-    
-    private function eligible_to_train(int $coach_id): bool {
-        try {
-            $sql = 'SELECT 1 FROM coaches c
-                    JOIN users u ON c.coach_id = u.user_id
-                    WHERE c.coach_id = :coach_id
-                    AND c.status = "untrained"
-                    AND c.dbs_completed = TRUE
-                    AND c.ref_completed = TRUE
-                    AND c.commitment_completed = TRUE
-                    AND u.status = "active"
-                    LIMIT 1';
-            
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([':coach_id' => $coach_id]);
-            return $stmt->fetch() !== false;
-        } catch (Exception $e) {
-            $this->logger->error('eligible_to_train: ' . $e->getMessage());
-            return false;
-        }
-    }
-    # --------------------------------------------------------------------------
-    
-    private function eligible_to_pair(int $coach_id): bool {
-        try {
-            $sql = 'SELECT 1 FROM coaches c
-                    JOIN users u ON c.coach_id = u.user_id
-                    WHERE c.coach_id = :coach_id
-                    AND c.status = "trained"
-                    AND c.edib_train_completed = TRUE
-                    AND c.consol_train_completed = TRUE
-                    AND u.status = "active"
-                    LIMIT 1';
-            
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([':coach_id' => $coach_id]);
-            return $stmt->fetch() !== false;
-        } catch (Exception $e) {
-            $this->logger->error('eligible_to_pair: ' . $e->getMessage());
-            return false;
-        }
-    }
+    #---------------------------------------------------------------------------
 
 }
-
 # ------------------------------------------------------------------------------
 
 /*

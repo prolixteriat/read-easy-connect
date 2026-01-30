@@ -11,13 +11,14 @@ import { useReviews } from '@hooks/useReviews';
 import { useUsers } from '@hooks/useUsers';
 import { useReaders } from '@hooks/useReaders';
 import { useVenues } from '@hooks/useOrg';
+import { useCoaches } from '@hooks/useCoaches';
 
 import { addReview, editReview, type TAddReviewData } from '@lib/api/apiReviews';
 import { asString} from '@lib/helper';
 import { type TReviewStatus } from '@lib/types';
 import { JwtManager } from '@lib/jwtManager';
 
-import { Button, ErrorDialog, ConfirmDialog, Loading } from '@components/Common';
+import { Button, ErrorDialog, ConfirmDialog, Loading, HoverHelp } from '@components/Common';
 
 // -----------------------------------------------------------------------------
 
@@ -66,6 +67,7 @@ export default function ReviewsCalendar(): React.JSX.Element {
   const { data: usersData, isLoading: usersLoading } = useUsers();
   const { data: readersData, isLoading: readersLoading } = useReaders();
   const { data: venuesData, isLoading: venuesLoading } = useVenues();
+  const { data: coachesData, isLoading: coachesLoading } = useCoaches();
   const jwtManager = new JwtManager();
   const currentUserId = jwtManager.getUserId();
 
@@ -272,7 +274,7 @@ export default function ReviewsCalendar(): React.JSX.Element {
     });
   };
 
-  const isDataLoading = reviewsLoading || usersLoading || readersLoading || venuesLoading;
+  const isDataLoading = reviewsLoading || usersLoading || readersLoading || venuesLoading || coachesLoading;
 
   if (isDataLoading) {
     return <Loading />;
@@ -336,7 +338,7 @@ export default function ReviewsCalendar(): React.JSX.Element {
       />
 
       {/* Edit Modal */}
-      <Dialog open={isEditOpen} onClose={() => setIsEditOpen(false)} className='relative z-50'>
+      <Dialog open={isEditOpen} onClose={() => {}} className='relative z-50'>
         <div className='fixed inset-0 bg-black/30' aria-hidden='true' />
         <div className='fixed inset-0 flex items-center justify-center p-2 sm:p-4'>
           <DialogPanel className='w-full max-w-md mx-2 sm:mx-0 rounded-xl bg-white p-4 sm:p-6 shadow-lg max-h-[90vh] overflow-y-auto'>
@@ -358,12 +360,23 @@ export default function ReviewsCalendar(): React.JSX.Element {
                   />
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Coach</label>
+                  <label className='block text-sm font-medium text-gray-700'>
+                    Coach
+                    <HoverHelp text='Use the Send System Emails option in the individual Coach configuration to control whether automated invitations are sent' />
+                  </label>
                   <input
                     className='w-full rounded-md border p-2 bg-gray-100'
                     value={selectedEvent.coach_name}
                     readOnly
                   />
+                  {(() => {
+                    const coach = coachesData?.find(c => c.coach_id === selectedEvent.coach_id);
+                    return coach ? (
+                      <p className='text-sm text-gray-600 mt-1'>
+                        {coach.use_email === 1 ? 'Coach will receive an automated email invitation' : 'Coach will not receive an automated email invitation'}
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
 
                 <div>
@@ -431,7 +444,7 @@ export default function ReviewsCalendar(): React.JSX.Element {
       </Dialog>
 
       {/* Add Modal */}
-      <Dialog open={isAddOpen} onClose={() => setIsAddOpen(false)} className='relative z-50'>
+      <Dialog open={isAddOpen} onClose={() => {}} className='relative z-50'>
         <div className='fixed inset-0 bg-black/30' aria-hidden='true' />
         <div className='fixed inset-0 flex items-center justify-center p-2 sm:p-4'>
           <DialogPanel className='w-full max-w-md mx-2 sm:mx-0 rounded-xl bg-white p-4 sm:p-6 shadow-lg max-h-[90vh] overflow-y-auto'>
@@ -460,12 +473,23 @@ export default function ReviewsCalendar(): React.JSX.Element {
               </div>
               {selectedCoachName && (
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Coach</label>
+                  <label className='block text-sm font-medium text-gray-700'>
+                    Coach
+                    <HoverHelp text='Use the Send System Emails option in the individual Coach configuration to control whether automated invitations are sent' />
+                  </label>
                   <input
                     className='w-full rounded-md border p-2 bg-gray-100'
                     value={selectedCoachName}
                     readOnly
                   />
+                  {(() => {
+                    const coach = coachesData?.find(c => c.coach_id === selectedReader?.coach_id);
+                    return coach ? (
+                      <p className='text-sm text-gray-600 mt-1'>
+                        {coach.use_email === 1 ? 'Coach will receive an automated email invitation' : 'Coach will not receive an automated email invitation'}
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
               )}
 

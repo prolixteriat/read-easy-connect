@@ -1,17 +1,17 @@
 import React, { Suspense } from 'react';
 
-import { useCoachesSummary } from '@hooks/useReports';
+import { useCoachDetail } from '@hooks/useReports';
 
-import { CoachesSummaryChart } from '@lib/lazy';
+import { CoachDetailChart } from '@lib/lazy';
 
 import { Loading } from '@components/Common';
 
-import CoachesSummaryTable from './CoachesSummaryTable';
+import CoachesSummaryTable from './CoachDetailTable';
 
 // -----------------------------------------------------------------------------
 
-export default function CoachesSummaryReport(): React.JSX.Element {
-  const { isLoading } = useCoachesSummary();
+export default function CoachDetailReport(): React.JSX.Element {
+  const { isLoading } = useCoachDetail();
 
   return (
     <div className='space-y-2 pt-2 px-2'>      
@@ -20,7 +20,7 @@ export default function CoachesSummaryReport(): React.JSX.Element {
         ) : (
           <div className='space-y-2'>
             <CoachesSummaryTable />
-            <Suspense fallback={<Loading />}><CoachesSummaryChart /></Suspense>
+            <Suspense fallback={<Loading />}><CoachDetailChart /></Suspense>
           </div>
         )
       }

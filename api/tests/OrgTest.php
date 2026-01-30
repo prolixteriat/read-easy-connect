@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------
 
 require_once __DIR__ . '/tst/TstDbOrg.php';
-require_once __DIR__ . '/utils/creds.php';
+require_once __DIR__ . '/tst/TstDbBase.php';
 
 # ------------------------------------------------------------------------------
 
@@ -18,19 +18,19 @@ class OrgTest extends TestCase {
 
     protected Slim\App $app;
     protected TstDbOrg $db;
+    protected TstDbBase $base;
     protected string $jwt_token;
     protected ServerRequestFactory $request_factory;
     protected StreamFactory $stream_factory;
-    protected array $tokens;
 
     # --------------------------------------------------------------------------
 
     protected function setUp(): void {
         
-        $this->tokens = TestTokens::get();
+        $this->base = new TstDbBase();
         $this->db = new TstDbOrg();
         $this->app = AppFactory::create();
-        $this->jwt_token = $this->tokens['admin']; 
+        $this->jwt_token = $this->base->test_director_jwt; 
         $this->request_factory = new ServerRequestFactory();
         $this->stream_factory = new StreamFactory();
 
@@ -38,12 +38,17 @@ class OrgTest extends TestCase {
     }
     # --------------------------------------------------------------------------
 
+    protected function tearDown(): void {
+        $this->base->cleanup();
+    }
+    # --------------------------------------------------------------------------
+
     public function test_add_region(): void {
 
-        $payload = ['name' => 'Test Region'];
+        $payload = ['name' => 'Test Add Region'];
         $region_id = null;
         try {
-            $this->jwt_token = $this->tokens['director'];
+            $this->jwt_token = $this->base->test_director_jwt;
             $request = $this->create_request('POST', '/org/add-region', $payload);
             $response = $this->app->handle($request);
             $this->assertEquals(200, $response->getStatusCode());
@@ -62,7 +67,7 @@ class OrgTest extends TestCase {
 
         $region_id = null;
         try {
-            $this->jwt_token = $this->tokens['director'];
+            $this->jwt_token = $this->base->test_director_jwt;
             
             # Add new test region
             $add_payload = ['name' => 'Test Region Original'];
@@ -110,7 +115,7 @@ class OrgTest extends TestCase {
 
     public function test_get_regions(): void {
 
-        $this->jwt_token = $this->tokens['director'];
+        $this->jwt_token = $this->base->test_director_jwt;
         $request = $this->create_request('GET', '/org/get-regions');
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());
@@ -121,11 +126,11 @@ class OrgTest extends TestCase {
 
     public function test_add_affiliate(): void {
 
-        $payload = ['name' => 'Test Affiliate', 
-                    'region_id' => '1'];
+        $payload = ['name' => 'Test Add Affiliate', 
+                    'region_id' => $this->base->test_region_id];
         $affiliate_id = null;
         try {
-            $this->jwt_token = $this->tokens['director'];
+            $this->jwt_token = $this->base->test_director_jwt;
             $request = $this->create_request('POST', '/org/add-affiliate', $payload);
             $response = $this->app->handle($request);
             $this->assertEquals(200, $response->getStatusCode());
@@ -144,10 +149,10 @@ class OrgTest extends TestCase {
 
         $affiliate_id = null;
         try {
-            $this->jwt_token = $this->tokens['director'];
+            $this->jwt_token = $this->base->test_director_jwt;
             
             # Add new test affiliate
-            $add_payload = ['name' => 'Test Affiliate Original', 'region_id' => '1'];
+            $add_payload = ['name' => 'Test Affiliate Original', 'region_id' => $this->base->test_region_id];
             $add_request = $this->create_request('POST', '/org/add-affiliate', $add_payload);
             $add_response = $this->app->handle($add_request);
             $this->assertEquals(200, $add_response->getStatusCode());
@@ -155,7 +160,7 @@ class OrgTest extends TestCase {
             $affiliate_id = $add_data['affiliate_id'];
             
             # Retrieve and check initial name
-            $get_request = $this->create_request('GET', '/org/get-affiliates?region_id=1');
+            $get_request = $this->create_request('GET', '/org/get-affiliates?region_id=' . $this->base->test_region_id);
             $get_response = $this->app->handle($get_request);
             $this->assertEquals(200, $get_response->getStatusCode());
             $affiliates = json_decode((string) $get_response->getBody(), true);
@@ -174,7 +179,7 @@ class OrgTest extends TestCase {
             $this->assertEquals(200, $edit_response->getStatusCode());
             
             # Retrieve and check updated name
-            $get_request2 = $this->create_request('GET', '/org/get-affiliates?region_id=1');
+            $get_request2 = $this->create_request('GET', '/org/get-affiliates?region_id=' . $this->base->test_region_id);
             $get_response2 = $this->app->handle($get_request2);
             $this->assertEquals(200, $get_response2->getStatusCode());
             $affiliates2 = json_decode((string) $get_response2->getBody(), true);
@@ -194,15 +199,15 @@ class OrgTest extends TestCase {
 
     public function test_get_affiliates(): void {
 
-        $this->jwt_token = $this->tokens['director'];
+        $this->jwt_token = $this->base->test_director_jwt;
         $request = $this->create_request('GET', 
-            '/org/get-affiliates?region_id=' . TEST_REGION_ID);
+            '/org/get-affiliates?region_id=' . $this->base->test_region_id);
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());
         $body = (string) $response->getBody();
         $data = json_decode($body, true);
-        $this->assertCount(2, $data);
-        $this->assertEquals('Harlow & Chelmsford', $data[1]['name']);
+        $this->assertCount(1, $data);
+        $this->assertEquals('Test Affiliate', $data[0]['name']);
     }
     # --------------------------------------------------------------------------
 
@@ -211,7 +216,7 @@ class OrgTest extends TestCase {
         $payload = ['name' => 'Test Area2'];
         $area_id = null;
         try {
-            $this->jwt_token = $this->tokens['manager'];
+            $this->jwt_token = $this->base->test_manager_jwt;
             $request = $this->create_request('POST', '/org/add-area', $payload);
             $response = $this->app->handle($request);
             $this->assertEquals(200, $response->getStatusCode());
@@ -230,7 +235,7 @@ class OrgTest extends TestCase {
 
         $area_id = null;
         try {
-            $this->jwt_token = $this->tokens['manager'];
+            $this->jwt_token = $this->base->test_manager_jwt;
             
             # Add new test area
             $add_payload = ['name' => 'Test Area Original'];
@@ -274,7 +279,7 @@ class OrgTest extends TestCase {
 
     public function test_get_areas(): void {
 
-        $this->jwt_token = $this->tokens['coordinator'];
+        $this->jwt_token = $this->base->test_coordinator_jwt;
         $request = $this->create_request('GET', '/org/get-areas');
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());
@@ -285,10 +290,10 @@ class OrgTest extends TestCase {
 
     public function test_add_venue(): void {
 
-        $payload = ['name' => 'Test Venue'];
+        $payload = ['name' => 'Test Add Venue'];
         $venue_id = null;
         try {
-            $this->jwt_token = $this->tokens['manager'];
+            $this->jwt_token = $this->base->test_manager_jwt;
             $request = $this->create_request('POST', '/org/add-venue', $payload);
             $response = $this->app->handle($request);
             $this->assertEquals(200, $response->getStatusCode());
@@ -307,7 +312,7 @@ class OrgTest extends TestCase {
 
         $venue_id = null;
         try {
-            $this->jwt_token = $this->tokens['manager'];
+            $this->jwt_token = $this->base->test_manager_jwt;
             
             # Add new test venue
             $add_payload = ['name' => 'Test Venue Original'];
@@ -351,7 +356,7 @@ class OrgTest extends TestCase {
 
     public function test_get_venues(): void {
 
-        $this->jwt_token = $this->tokens['coordinator'];
+        $this->jwt_token = $this->base->test_coordinator_jwt;
         $request = $this->create_request('GET', '/org/get-venues');
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());

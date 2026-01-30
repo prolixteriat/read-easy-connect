@@ -31,8 +31,56 @@ class DbLessons extends DbBase {
         if (!$status->success) {
             return $status;
         }
+        
+        # Validate numeric IDs
+        foreach (['coach_id', 'reader_id', 'venue_id'] as $id_field) {
+            if (!is_numeric($data[$id_field]) || $data[$id_field] <= 0) {
+                return new Status(false, 400, ['message' => "Invalid {$id_field}"]);
+            }
+        }
+        
+        # Validate date format
+        if (!DateTime::createFromFormat('Y-m-d H:i:s', $data['date']) && 
+            !DateTime::createFromFormat('Y-m-d', $data['date'])) {
+            return new Status(false, 400, ['message' => 'Invalid date format']);
+        }
 
         try {
+            # Validate access to coach, reader, and venue
+            $user_affiliate = $this->get_user_affiliate_id($this->user_id, $this->role);
+            if (!$user_affiliate) {
+                return new Status(false, 403, ['message' => 'User not associated with any affiliate']);
+            }
+            
+            # Role-specific access control: coaches can only add lessons for themselves
+            if ($this->role === 'coach' && (int)$data['coach_id'] !== $this->user_id) {
+                return new Status(false, 403, ['message' => 'Coaches can only add lessons for themselves']);
+            }
+            
+            # Verify reader belongs to user's affiliate
+            $reader_check = $this->conn->prepare('SELECT affiliate_id FROM readers WHERE reader_id = :reader_id');
+            $reader_check->execute([':reader_id' => $data['reader_id']]);
+            $reader_affiliate = $reader_check->fetchColumn();
+            if (!$reader_affiliate || $reader_affiliate !== $user_affiliate) {
+                return new Status(false, 403, ['message' => 'Access denied to this reader']);
+            }
+            
+            # Verify coach belongs to user's affiliate
+            $coach_check = $this->conn->prepare('SELECT affiliate_id FROM coaches WHERE coach_id = :coach_id');
+            $coach_check->execute([':coach_id' => $data['coach_id']]);
+            $coach_affiliate = $coach_check->fetchColumn();
+            if (!$coach_affiliate || $coach_affiliate !== $user_affiliate) {
+                return new Status(false, 403, ['message' => 'Access denied to this coach']);
+            }
+            
+            # Verify venue belongs to user's affiliate
+            $venue_check = $this->conn->prepare('SELECT affiliate_id FROM venues WHERE venue_id = :venue_id');
+            $venue_check->execute([':venue_id' => $data['venue_id']]);
+            $venue_affiliate = $venue_check->fetchColumn();
+            if (!$venue_affiliate || $venue_affiliate !== $user_affiliate) {
+                return new Status(false, 403, ['message' => 'Access denied to this venue']);
+            }
+            
             $query = '
                 INSERT INTO lessons (coach_id, reader_id, date, venue_id, status, attention, notes)
                 VALUES (:coach_id, :reader_id, :date, :venue_id, :status, :attention, :notes)
@@ -49,8 +97,7 @@ class DbLessons extends DbBase {
             ]);
             $lesson_id = $this->conn->lastInsertId();
             $user_affiliate = $this->get_user_affiliate_id($this->user_id, $this->role);
-            $this->add_audit(AuditType::LESSON_ADDED, "Lesson added: ID {$lesson_id}", 
-                            $this->user_id, $user_affiliate);
+            # $this->add_audit(AuditType::LESSON_ADDED, "Lesson added: ID {$lesson_id}", $this->user_id, $user_affiliate);
             $status = new Status(true, 200, ['lesson_id' => $lesson_id]);
         } catch (Exception $e) {
             $this->logger->error('lessons_add: ' . $e->getMessage());
@@ -75,16 +122,69 @@ class DbLessons extends DbBase {
         if (!$status->success) {
             return $status;
         }
+        
+        # Validate lesson_id is numeric and positive
+        if (!is_numeric($data['lesson_id']) || $data['lesson_id'] <= 0) {
+            return new Status(false, 400, ['message' => 'Invalid lesson_id']);
+        }
 
         try {
+            # Verify lesson exists and get lesson details with coach info for authorization
+            $lesson_check = $this->conn->prepare('
+                SELECT l.lesson_id, l.coach_id, r.affiliate_id 
+                FROM lessons l 
+                JOIN readers r ON l.reader_id = r.reader_id 
+                WHERE l.lesson_id = :lesson_id
+            ');
+            if (!$lesson_check) {
+                throw new Exception('Failed to prepare lesson verification query');
+            }
+            
+            $result = $lesson_check->execute([':lesson_id' => $data['lesson_id']]);
+            if (!$result) {
+                throw new Exception('Failed to execute lesson verification query');
+            }
+            
+            $lesson_data = $lesson_check->fetch(PDO::FETCH_ASSOC);
+            if (!$lesson_data) {
+                $this->logger->warning("edit_lesson: Lesson not found - ID: {$data['lesson_id']}, User: {$this->user_id}");
+                return new Status(false, 404, ['message' => 'Lesson not found']);
+            }
+            
+            $user_affiliate = $this->get_user_affiliate_id($this->user_id, $this->role);
+            if (!$user_affiliate || $user_affiliate !== $lesson_data['affiliate_id']) {
+                $this->logger->warning("edit_lesson: Access denied - Lesson ID: {$data['lesson_id']}, User: {$this->user_id}");
+                return new Status(false, 403, ['message' => 'Access denied to this lesson']);
+            }
+            
+            # Role-specific authorization: coaches can only edit their own lessons
+            if ($this->role === 'coach' && (int)$lesson_data['coach_id'] !== $this->user_id) {
+                $this->logger->warning("edit_lesson: Coach access denied - Lesson ID: {$data['lesson_id']}, Coach: {$this->user_id}");
+                return new Status(false, 403, ['message' => 'Coaches can only edit their own lessons']);
+            }
+            
             $updates = [];
             $params = [':lesson_id' => $data['lesson_id']];
             
             if (isset($data['coach_id'])) {
+                # Verify new coach belongs to user's affiliate
+                $coach_check = $this->conn->prepare('SELECT affiliate_id FROM coaches WHERE coach_id = :coach_id');
+                $coach_check->execute([':coach_id' => $data['coach_id']]);
+                $coach_affiliate = $coach_check->fetchColumn();
+                if (!$coach_affiliate || $coach_affiliate !== $user_affiliate) {
+                    return new Status(false, 403, ['message' => 'Access denied to this coach']);
+                }
                 $updates[] = 'coach_id = :coach_id';
                 $params[':coach_id'] = $data['coach_id'];
             }
             if (isset($data['reader_id'])) {
+                # Verify new reader belongs to user's affiliate
+                $reader_check = $this->conn->prepare('SELECT affiliate_id FROM readers WHERE reader_id = :reader_id');
+                $reader_check->execute([':reader_id' => $data['reader_id']]);
+                $reader_affiliate = $reader_check->fetchColumn();
+                if (!$reader_affiliate || $reader_affiliate !== $user_affiliate) {
+                    return new Status(false, 403, ['message' => 'Access denied to this reader']);
+                }
                 $updates[] = 'reader_id = :reader_id';
                 $params[':reader_id'] = $data['reader_id'];
             }
@@ -97,6 +197,11 @@ class DbLessons extends DbBase {
                 $params[':venue_id'] = $data['venue_id'];
             }
             if (isset($data['status'])) {
+                # Validate status value against allowed values
+                $allowed_statuses = ['scheduled', 'completed', 'cancelled', 'postponed'];
+                if (!in_array($data['status'], $allowed_statuses, true)) {
+                    return new Status(false, 400, ['message' => 'Invalid status value']);
+                }
                 $updates[] = 'status = :status';
                 $params[':status'] = $data['status'];
             }
@@ -105,6 +210,10 @@ class DbLessons extends DbBase {
                 $params[':attention'] = $data['attention'];
             }
             if (isset($data['notes'])) {
+                # Validate notes length
+                if (strlen($data['notes']) > 1000) {
+                    return new Status(false, 400, ['message' => 'Notes must be 1000 characters or less']);
+                }
                 $updates[] = 'notes = :notes';
                 $params[':notes'] = $data['notes'];
             }
@@ -119,8 +228,7 @@ class DbLessons extends DbBase {
             $stmt->execute($params);
             
             $user_affiliate = $this->get_user_affiliate_id($this->user_id, $this->role);
-            $this->add_audit(AuditType::LESSON_EDITED, "Lesson updated: ID {$data['lesson_id']}", 
-                            $this->user_id, $user_affiliate);
+            # $this->add_audit(AuditType::LESSON_EDITED, "Lesson updated: ID {$data['lesson_id']}", $this->user_id, $user_affiliate);
             $status = new Status(true, 200, ['message' => 'Lesson updated successfully']);
         } catch (Exception $e) {
             $this->logger->error('lessons_edit: ' . $e->getMessage());
@@ -156,6 +264,12 @@ class DbLessons extends DbBase {
                 $auth_stmt = $this->conn->prepare($auth_query);
                 $auth_stmt->execute([':user_id' => $user_id]);
                 $affiliate_id = $auth_stmt->fetchColumn();
+            } else {
+                return new Status(false, 403, ['message' => 'Invalid role for this operation']);
+            }
+            
+            if (!$affiliate_id) {
+                return new Status(false, 403, ['message' => 'User not associated with any affiliate']);
             }
 
             $query = '
@@ -168,10 +282,18 @@ class DbLessons extends DbBase {
             $params = [':affiliate_id' => $affiliate_id];
             
             if (isset($data['start_date'])) {
+                # Validate date format to prevent SQL injection
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['start_date'])) {
+                    return new Status(false, 400, ['message' => 'Invalid start_date format']);
+                }
                 $query .= ' AND l.date >= :start';
                 $params[':start'] = $data['start_date'];
             }
             if (isset($data['end_date'])) {
+                # Validate date format to prevent SQL injection
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['end_date'])) {
+                    return new Status(false, 400, ['message' => 'Invalid end_date format']);
+                }
                 $query .= ' AND l.date <= :end';
                 $params[':end'] = $data['end_date'];
             }
@@ -179,7 +301,15 @@ class DbLessons extends DbBase {
             $query .= ' ORDER BY l.date DESC';
             
             $stmt = $this->conn->prepare($query);
-            $stmt->execute($params);
+            if (!$stmt) {
+                throw new Exception('Failed to prepare lessons query');
+            }
+            
+            $result = $stmt->execute($params);
+            if (!$result) {
+                throw new Exception('Failed to execute lessons query');
+            }
+            
             $lessons = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             $status = new Status(true, 200, $lessons);
@@ -205,6 +335,11 @@ class DbLessons extends DbBase {
         $status = $this->validate_params($data, $required);
         if (!$status->success) {
             return $status;
+        }
+        
+        # Validate coach_id is numeric and positive
+        if (!is_numeric($data['coach_id']) || $data['coach_id'] <= 0) {
+            return new Status(false, 400, ['message' => 'Invalid coach_id']);
         }
 
         try {
@@ -281,6 +416,11 @@ class DbLessons extends DbBase {
         $status = $this->validate_params($data, $required);
         if (!$status->success) {
             return $status;
+        }
+        
+        # Validate reader_id is numeric and positive
+        if (!is_numeric($data['reader_id']) || $data['reader_id'] <= 0) {
+            return new Status(false, 400, ['message' => 'Invalid reader_id']);
         }
 
         try {

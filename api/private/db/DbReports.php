@@ -67,8 +67,17 @@ class DbReports extends DbBase {
             $query .= ' ORDER BY a.created_at DESC LIMIT 1000';
             
             $stmt = $this->conn->prepare($query);
-            $stmt->execute($params);
+            if (!$stmt) {
+                throw new Exception('Failed to prepare audit logs query');
+            }
+            $result = $stmt->execute($params);
+            if (!$result) {
+                throw new Exception('Failed to execute audit logs query');
+            }
             $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if ($logs === false) {
+                throw new Exception('Failed to fetch audit logs');
+            }
             
             $status = new Status(true, 200, $logs);
         } catch (Exception $e) {
@@ -78,13 +87,13 @@ class DbReports extends DbBase {
         return $status;
     }
     # --------------------------------------------------------------------------
-    # Role     : manager, coordinator
+    # Role     : manager, coordinator, viewer
     # Mandatory: n/a
     # Optional : n/a
     
-    public function get_coaches_summary(Request $request): Status {
+    public function get_coach_detail(Request $request): Status {
         try {
-            $status = $this->validate_token($request, ['manager', 'coordinator']);
+            $status = $this->validate_token($request, ['manager', 'coordinator', 'viewer']);
             if (!$status->success) { 
                 return $status; 
             }
@@ -118,28 +127,7 @@ class DbReports extends DbBase {
             $stmt = $this->conn->prepare($query);
             $stmt->execute($params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            # Ensure 'Unassigned' row exists even if no unassigned coaches
-            $has_unassigned = false;
-            foreach ($rows as $row) {
-                if ($row['coordinator_name'] === 'Unassigned') {
-                    $has_unassigned = true;
-                    break;
-                }
-            }
-            
-            if (!$has_unassigned) {
-                $rows[] = [
-                    'user_id' => 0,
-                    'coordinator_name' => 'Unassigned',
-                    'paired' => 0,
-                    'waiting_pairing' => 0,
-                    'waiting_training' => 0,
-                    'waiting_checks' => 0,
-                    'on_break' => 0
-                ];
-            }
-            
+
             # Calculate row totals
             $total_rows = [
                 'coordinator_name' => 'TOTAL_ROWS',
@@ -192,14 +180,112 @@ class DbReports extends DbBase {
         }
         return $status;
     }
+    
     # --------------------------------------------------------------------------
-    # Role     : manager, coordinator
+    # Role     : manager, coordinator, viewer
     # Mandatory: n/a
     # Optional : n/a
     
-    public function get_readers_detail(Request $request): Status {
+    public function get_dashboard(Request $request): Status {
         try {
-            $status = $this->validate_token($request, ['manager', 'coordinator']);
+            $status = $this->validate_token($request, ['manager', 'coordinator', 'viewer']);
+            if (!$status->success) { 
+                return $status; 
+            }
+            
+            $user_affiliate = $this->get_user_affiliate_id($this->user_id, $this->role);
+            if (!$user_affiliate) {
+                return new Status(false, 403, 'User not associated with affiliate');
+            }
+            
+            # Get affiliate name
+            $stmt = $this->conn->prepare('SELECT name FROM affiliates WHERE affiliate_id = ?');
+            $stmt->execute([$user_affiliate]);
+            $affiliate_name = $stmt->fetchColumn();
+            
+            $dashboard = [
+                'affiliate' => $affiliate_name,
+                'manager' => ['active' => 0, 'onhold' => 0],
+                'viewer' => ['active' => 0, 'onhold' => 0],
+                'coordinator' => ['active' => 0, 'onhold' => 0],
+                'coach' => ['active' => 0, 'onhold' => 0],
+                'reader_TP1' => ['active' => 0, 'onhold' => 0],
+                'reader_TP2' => ['active' => 0, 'onhold' => 0],
+                'reader_TP3' => ['active' => 0, 'onhold' => 0],
+                'reader_TP4' => ['active' => 0, 'onhold' => 0],
+                'reader_TP5' => ['active' => 0, 'onhold' => 0]
+            ];
+            
+            # Count managers
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN managers m ON u.user_id = m.manager_id WHERE m.affiliate_id = ? AND u.status = "active" AND u.disabled = FALSE');
+            $stmt->execute([$user_affiliate]);
+            $dashboard['manager']['active'] = $stmt->fetchColumn();
+            
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN managers m ON u.user_id = m.manager_id WHERE m.affiliate_id = ? AND u.status = "onhold" AND u.disabled = FALSE');
+            $stmt->execute([$user_affiliate]);
+            $dashboard['manager']['onhold'] = $stmt->fetchColumn();
+            
+            # Count viewers
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN viewers v ON u.user_id = v.viewer_id WHERE v.affiliate_id = ? AND u.status = "active" AND u.disabled = FALSE');
+            $stmt->execute([$user_affiliate]);
+            $dashboard['viewer']['active'] = $stmt->fetchColumn();
+            
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN viewers v ON u.user_id = v.viewer_id WHERE v.affiliate_id = ? AND u.status = "onhold" AND u.disabled = FALSE');
+            $stmt->execute([$user_affiliate]);
+            $dashboard['viewer']['onhold'] = $stmt->fetchColumn();
+            
+            # Count coordinators
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN coordinators c ON u.user_id = c.coordinator_id WHERE c.affiliate_id = ? AND u.status = "active" AND u.disabled = FALSE');
+            $stmt->execute([$user_affiliate]);
+            $dashboard['coordinator']['active'] = $stmt->fetchColumn();
+            
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN coordinators c ON u.user_id = c.coordinator_id WHERE c.affiliate_id = ? AND u.status = "onhold" AND u.disabled = FALSE');
+            $stmt->execute([$user_affiliate]);
+            $dashboard['coordinator']['onhold'] = $stmt->fetchColumn();
+            
+            # Count coaches
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN coaches c ON u.user_id = c.coach_id WHERE c.affiliate_id = ? AND u.status = "active" AND u.disabled = FALSE');
+            $stmt->execute([$user_affiliate]);
+            $dashboard['coach']['active'] = $stmt->fetchColumn();
+            
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN coaches c ON u.user_id = c.coach_id WHERE c.affiliate_id = ? AND u.status = "onhold" AND u.disabled = FALSE');
+            $stmt->execute([$user_affiliate]);
+            $dashboard['coach']['onhold'] = $stmt->fetchColumn();
+            
+            # Count readers by level (excluding DO, G, C statuses)
+            foreach (['TP1', 'TP2', 'TP3', 'TP4', 'TP5'] as $level) {
+                $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM readers WHERE affiliate_id = ? AND level = ? AND status = "S"');
+                $stmt->execute([$user_affiliate, $level]);
+                $dashboard["reader_$level"]['active'] = $stmt->fetchColumn();
+                
+                $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM readers WHERE affiliate_id = ? AND level = ? AND status IN ("NYS", "P")');
+                $stmt->execute([$user_affiliate, $level]);
+                $dashboard["reader_$level"]['onhold'] = $stmt->fetchColumn();
+            }
+            
+            # Add totals for each role
+            foreach ($dashboard as $key => &$role) {
+                if ($key !== 'affiliate' && is_array($role)) {
+                    $role['total'] = $role['active'] + $role['onhold'];
+                }
+            }
+            unset($role);
+            
+            $status = new Status(true, 200, $dashboard);
+        } catch (Exception $e) {
+            $this->logger->error('get_dashboard: ' . $e->getMessage());
+            $status = new Status(false, 500, 'Error occurred (get_dashboard)');
+        }
+        return $status;
+    }
+    # --------------------------------------------------------------------------
+    # Role     : manager, coordinator, viewer
+    # Mandatory: n/a
+    # Optional : n/a
+    
+    public function get_reader_detail(Request $request): Status {
+        try {
+            $status = $this->validate_token($request, ['manager', 'coordinator', 'viewer']);
             if (!$status->success) { 
                 return $status; 
             }
@@ -221,11 +307,11 @@ class DbReports extends DbBase {
                     r.level as reader_level,
                     r.status as reader_status,
                     r.notes as reader_notes,
-                    (r.TP1_completion_at IS NOT NULL) as TP1,
-                    (r.TP2_completion_at IS NOT NULL) as TP2,
-                    (r.TP3_completion_at IS NOT NULL) as TP3,
-                    (r.TP4_completion_at IS NOT NULL) as TP4,
-                    (r.TP5_completion_at IS NOT NULL) as TP5
+                    (r.TP1_start_at IS NOT NULL) as TP1,
+                    (r.TP2_start_at IS NOT NULL) as TP2,
+                    (r.TP3_start_at IS NOT NULL) as TP3,
+                    (r.TP4_start_at IS NOT NULL) as TP4,
+                    (r.TP5_start_at IS NOT NULL) as TP5
                 FROM readers r
                 LEFT JOIN areas a ON r.area_id = a.area_id
                 LEFT JOIN coaches c ON r.coach_id = c.coach_id
@@ -247,7 +333,7 @@ class DbReports extends DbBase {
             $status = new Status(false, 500, 'Error occurred (get_readers_detail)');
         }
         return $status;
-    }    # --------------------------------------------------------------------------
+    }
 }
 # ------------------------------------------------------------------------------
 

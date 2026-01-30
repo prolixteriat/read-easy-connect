@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { apiBaseUrl } from '@lib/config';
+import { type TTrainingStatus } from '@lib/types';
 import { type IApiResponse, posterAuth } from './posterAuth';
 
 // -----------------------------------------------------------------------------
@@ -26,9 +27,11 @@ const AddCoachSchema = z.object({
     dbs_completed: z.number().optional(),
     ref_completed: z.number().optional(),
     commitment_completed: z.number().optional(),
-    training_booked: z.number().optional(),
-    edib_train_completed: z.number().optional(),
-    consol_train_completed: z.number().optional(),
+    training: z.custom<TTrainingStatus>().optional(),
+    edib_training: z.custom<TTrainingStatus>().optional(),
+    consol_training: z.custom<TTrainingStatus>().optional(),
+    use_email: z.number().optional(),
+    consol_training_at: z.string().optional(),
     availability: z.string().optional(),
     preferences: z.string().optional(),
     notes: z.string().optional(),    
@@ -38,6 +41,8 @@ export type TAddCoachData = z.TypeOf<typeof AddCoachSchema>;
 
 const EditCoachSchema = z.object({
     coach_id: z.number(),
+    first_name: z.string().optional(),
+    last_name: z.string().optional(),
     address: z.string().optional(),
     telephone: z.string().optional(),
     nok_name: z.string().optional(),
@@ -54,9 +59,11 @@ const EditCoachSchema = z.object({
     dbs_completed: z.number().optional(),
     ref_completed: z.number().optional(),
     commitment_completed: z.number().optional(),
-    training_booked: z.number().optional(),
-    edib_train_completed: z.number().optional(),
-    consol_train_completed: z.number().optional(),
+    training: z.custom<TTrainingStatus>().optional(),
+    edib_training: z.custom<TTrainingStatus>().optional(),
+    consol_training: z.custom<TTrainingStatus>().optional(),
+    use_email: z.number().optional(),
+    consol_training_at: z.string().optional(),
     availability: z.string().optional(),
     preferences: z.string().optional(),
     notes: z.string().optional(),

@@ -3,7 +3,7 @@ import { type TReaderStatus } from '@lib/types';
 
 // -----------------------------------------------------------------------------
 
-interface ReadersStatusFilterProps {
+interface ReaderStatusFilterProps {
   selectedStatuses: TReaderStatus[];
   onStatusChange: (statuses: TReaderStatus[]) => void;
 }
@@ -21,7 +21,7 @@ const allStatuses: TReaderStatus[] = ['NYS', 'S', 'P', 'DO', 'G', 'C'];
 
 // -----------------------------------------------------------------------------
 
-export default function ReadersStatusFilter({ selectedStatuses, onStatusChange }: ReadersStatusFilterProps): React.JSX.Element {
+export default function ReaderStatusFilter({ selectedStatuses, onStatusChange }: ReaderStatusFilterProps): React.JSX.Element {
   const handleStatusToggle = (status: TReaderStatus) => {
     if (selectedStatuses.includes(status)) {
       onStatusChange(selectedStatuses.filter(s => s !== status));

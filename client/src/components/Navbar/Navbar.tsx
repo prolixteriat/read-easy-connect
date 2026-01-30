@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Menu, X, ChevronDown, User } from 'lucide-react';
 
 import AppIcon from '../../assets/app-icon.ico';
 
+import { environment } from '@lib/config';
 import { useAuth } from '../../context/useAuth';
 import { roleRoutes } from '../../routes/roleRoutes';
 import { EditProfile, Login } from '@lib/lazy';
@@ -23,6 +24,25 @@ export default function Navbar(): React.JSX.Element {
   const [loginOpen, setLoginOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setMobileMenuOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    if (mobileMenuOpen || userMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [mobileMenuOpen, userMenuOpen]);
 
 
 
@@ -64,13 +84,13 @@ export default function Navbar(): React.JSX.Element {
           className='flex items-center space-x-2 font-bold text-lg hover:bg-gray-200 px-2 py-1 rounded transition-colors'
         >
           <img src={AppIcon} alt='App Icon' className='w-8 h-8' />
-          <span>Connect</span>
+          <span>Connect{environment !== 'prod' ? ` (${environment})` : ''}</span>
         </button>
 
         {/* Top-right login/user menu */}
         <div className='flex items-center space-x-2'>
           {role ? (
-            <div className='relative'>
+            <div className='relative' ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className='flex items-center px-2 py-1 rounded hover:bg-gray-200'
@@ -182,7 +202,7 @@ export default function Navbar(): React.JSX.Element {
 
       {/* Mobile menu dropdown */}
       {role && mobileMenuOpen && (
-        <div className='md:hidden fixed top-12 left-0 w-full bg-gray-50 border-b border-gray-300 pt-4 pb-4 z-40'>
+        <div ref={mobileMenuRef} className='md:hidden fixed top-12 left-0 w-full bg-gray-50 border-b border-gray-300 pt-4 pb-4 z-40'>
           {roleRoutes[role].map((item, index) => (
             <div key={item.path}>
               {index > 0 && <hr className='mx-4 my-2 border-gray-300' />}

@@ -9,7 +9,7 @@ import {
   Legend,
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
-import { useCoachesSummary } from '@hooks/useReports';
+import { useCoachDetail } from '@hooks/useReports';
 import { Loading } from '@components/Common';
 
 // Register chart.js components
@@ -24,8 +24,8 @@ ChartJS.register(
 
 // -----------------------------------------------------------------------------
 
-export default function CoachesSummaryChart(): React.JSX.Element {
-  const { data, isLoading, error } = useCoachesSummary();
+export default function CoachDetailChart(): React.JSX.Element {
+  const { data, isLoading, error } = useCoachDetail();
 
   if (isLoading) {
     return <Loading />;

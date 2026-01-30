@@ -1,10 +1,13 @@
 // -----------------------------------------------------------------------------
 
-export type TRole = 'admin' | 'director' | 'manager' | 'coordinator' | 'coach';
+export type TRole = 'admin' | 'director' | 'manager' | 'coordinator' | 'coach' |
+	 				'viewer';
 
 export type TUserStatus = 'active' | 'onhold' | 'leaver';
 
 export type TCoachStatus = 'unchecked' | 'untrained' | 'trained' | 'paired';
+
+export type TTrainingStatus = 'not_booked' | 'booked' | 'completed';
 
 export type TReaderLevel = 'TP1' | 'TP2' | 'TP3' | 'TP4' | 'TP5';
 

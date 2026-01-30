@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------
 
 require_once __DIR__ . '/tst/TstDbLoans.php';
-require_once __DIR__ . '/utils/creds.php';
+require_once __DIR__ . '/tst/TstDbBase.php';
 
 # ------------------------------------------------------------------------------
 
@@ -18,19 +18,19 @@ class LoansTest extends TestCase {
 
     protected Slim\App $app;
     protected TstDbLoans $db;
+    protected TstDbBase $base;
     protected string $jwt_token;
     protected ServerRequestFactory $request_factory;
     protected StreamFactory $stream_factory;
-    protected array $tokens;
 
     # --------------------------------------------------------------------------
 
     protected function setUp(): void {
         
-        $this->tokens = TestTokens::get();
+        $this->base = new TstDbBase();
         $this->db = new TstDbLoans();
         $this->app = AppFactory::create();
-        $this->jwt_token = $this->tokens['manager']; 
+        $this->jwt_token = $this->base->test_manager_jwt; 
         $this->request_factory = new ServerRequestFactory();
         $this->stream_factory = new StreamFactory();
 
@@ -38,17 +38,21 @@ class LoansTest extends TestCase {
     }
     # --------------------------------------------------------------------------
 
+    protected function tearDown(): void {
+        $this->base->cleanup();
+    }
+    # --------------------------------------------------------------------------
+
     public function test_add_loan(): void {
 
-        $reader_id = $this->db->test_get_reader_id();
         $payload = [
-            'reader_id' => $reader_id,
+            'reader_id' => $this->base->test_reader_id,
             'item' => 'Test Book'
         ];
         $loan_id = null;
         
         try {
-            $this->jwt_token = $this->tokens['manager'];
+            $this->jwt_token = $this->base->test_manager_jwt;
             $request = $this->create_request('POST', '/loans/add-loan', $payload);
             $response = $this->app->handle($request);
             $this->assertEquals(200, $response->getStatusCode());
@@ -75,15 +79,14 @@ class LoansTest extends TestCase {
 
     public function test_edit_loan(): void {
 
-        $reader_id = $this->db->test_get_reader_id();
         $loan_id = null;
         
         try {
-            $this->jwt_token = $this->tokens['manager'];
+            $this->jwt_token = $this->base->test_manager_jwt;
             
             # Add new test loan
             $add_payload = [
-                'reader_id' => $reader_id,
+                'reader_id' => $this->base->test_reader_id,
                 'item' => 'Test Edit Book'
             ];
             $add_request = $this->create_request('POST', '/loans/add-loan', $add_payload);
@@ -138,10 +141,8 @@ class LoansTest extends TestCase {
 
     public function test_get_loans_with_filters(): void {
 
-        $reader_id = $this->db->test_get_reader_id();
-        
         # Test with reader_id filter
-        $request = $this->create_request('GET', '/loans/get-loans?reader_id=' . $reader_id);
+        $request = $this->create_request('GET', '/loans/get-loans?reader_id=' . $this->base->test_reader_id);
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());
         $body = (string) $response->getBody();

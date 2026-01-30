@@ -4,12 +4,8 @@ import Dashboard from './Dashboard';
 
 // -----------------------------------------------------------------------------
 // Mock the hooks
-vi.mock('@hooks/useUsers', () => ({
-  useUsers: vi.fn(),
-}));
-
-vi.mock('@hooks/useReaders', () => ({
-  useReaders: vi.fn(),
+vi.mock('@hooks/useReports', () => ({
+  useDashboard: vi.fn(),
 }));
 
 // Mock the Loading component
@@ -19,22 +15,21 @@ vi.mock('@components/Common', () => ({
 
 // -----------------------------------------------------------------------------
 
-import { useUsers } from '@hooks/useUsers';
-import { useReaders } from '@hooks/useReaders';
+import { useDashboard } from '@hooks/useReports';
+import type { TDashboardSchema } from '@hooks/useReports';
 
-const mockUsers = [
-  { user_id: 1, first_name: 'John', last_name: 'Doe', email: 'john@test.com', disabled: 0, role: 'manager', status: 'active', affiliate_id: 1 },
-  { user_id: 2, first_name: 'Jane', last_name: 'Smith', email: 'jane@test.com', disabled: 0, role: 'coordinator', status: 'onhold', affiliate_id: 1 },
-  { user_id: 3, first_name: 'Bob', last_name: 'Wilson', email: 'bob@test.com', disabled: 0, role: 'coach', status: 'active', affiliate_id: 1 },
-  { user_id: 4, first_name: 'Alice', last_name: 'Brown', email: 'alice@test.com', disabled: 0, role: 'coach', status: 'leaver', affiliate_id: 1 },
-];
-
-const mockReaders = [
-  { reader_id: 1, name: 'Reader1 Test', affiliate_id: 1, area_id: 1, area_name: 'North', coach_id: 1, coach_first_name: 'John', coach_last_name: 'Doe', referrer_name: null, referrer_org: null, created_at: '2024-01-01', level: 'TP1', status: 'NYS', availability: null, notes: null, enrolment_at: null, coaching_start_at: null, graduation_at: null, TP1_start_at: null, TP2_start_at: null, TP3_start_at: null, TP4_start_at: null, TP5_start_at: null, TP1_completion_at: null, TP2_completion_at: null, TP3_completion_at: null, TP4_completion_at: null, TP5_completion_at: null, ons4_1: 0, ons4_2: 0, ons4_3: 0 },
-  { reader_id: 2, name: 'Reader2 Test', affiliate_id: 1, area_id: 1, area_name: 'North', coach_id: 1, coach_first_name: 'John', coach_last_name: 'Doe', referrer_name: null, referrer_org: null, created_at: '2024-01-01', level: 'TP2', status: 'S', availability: null, notes: null, enrolment_at: null, coaching_start_at: null, graduation_at: null, TP1_start_at: null, TP2_start_at: null, TP3_start_at: null, TP4_start_at: null, TP5_start_at: null, TP1_completion_at: null, TP2_completion_at: null, TP3_completion_at: null, TP4_completion_at: null, TP5_completion_at: null, ons4_1: 0, ons4_2: 0, ons4_3: 0 },
-  { reader_id: 3, name: 'Reader3 Test', affiliate_id: 1, area_id: 1, area_name: 'North', coach_id: 1, coach_first_name: 'John', coach_last_name: 'Doe', referrer_name: null, referrer_org: null, created_at: '2024-01-01', level: 'TP3', status: 'P', availability: null, notes: null, enrolment_at: null, coaching_start_at: null, graduation_at: null, TP1_start_at: null, TP2_start_at: null, TP3_start_at: null, TP4_start_at: null, TP5_start_at: null, TP1_completion_at: null, TP2_completion_at: null, TP3_completion_at: null, TP4_completion_at: null, TP5_completion_at: null, ons4_1: 0, ons4_2: 0, ons4_3: 0 },
-  { reader_id: 4, name: 'Reader4 Test', affiliate_id: 1, area_id: 1, area_name: 'North', coach_id: 1, coach_first_name: 'John', coach_last_name: 'Doe', referrer_name: null, referrer_org: null, created_at: '2024-01-01', level: 'TP1', status: 'DO', availability: null, notes: null, enrolment_at: null, coaching_start_at: null, graduation_at: null, TP1_start_at: null, TP2_start_at: null, TP3_start_at: null, TP4_start_at: null, TP5_start_at: null, TP1_completion_at: null, TP2_completion_at: null, TP3_completion_at: null, TP4_completion_at: null, TP5_completion_at: null, ons4_1: 0, ons4_2: 0, ons4_3: 0 },
-];
+const mockDashboardData: TDashboardSchema = {
+  affiliate: 'Test Affiliate',
+  manager: { active: 1, onhold: 0, total: 1 },
+  viewer: { active: 0, onhold: 0, total: 0 },
+  coordinator: { active: 1, onhold: 1, total: 2 },
+  coach: { active: 2, onhold: 0, total: 2 },
+  reader_TP1: { active: 1, onhold: 0, total: 1 },
+  reader_TP2: { active: 1, onhold: 0, total: 1 },
+  reader_TP3: { active: 1, onhold: 0, total: 1 },
+  reader_TP4: { active: 0, onhold: 0, total: 0 },
+  reader_TP5: { active: 0, onhold: 0, total: 0 },
+};
 
 // -----------------------------------------------------------------------------
 
@@ -49,32 +44,8 @@ describe('Dashboard', () => {
     });
   });
 
-  it('renders loading state when users are loading', () => {
-    vi.mocked(useUsers).mockReturnValue({
-      data: undefined,
-      error: undefined,
-      isLoading: true,
-      mutate: vi.fn(),
-    });
-    vi.mocked(useReaders).mockReturnValue({
-      data: mockReaders,
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    });
-
-    render(<Dashboard />);
-    expect(screen.getByTestId('loading')).toBeInTheDocument();
-  });
-
-  it('renders loading state when readers are loading', () => {
-    vi.mocked(useUsers).mockReturnValue({
-      data: mockUsers,
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    });
-    vi.mocked(useReaders).mockReturnValue({
+  it('renders loading state', () => {
+    vi.mocked(useDashboard).mockReturnValue({
       data: undefined,
       error: undefined,
       isLoading: true,
@@ -85,34 +56,9 @@ describe('Dashboard', () => {
     expect(screen.getByTestId('loading')).toBeInTheDocument();
   });
 
-  it('renders error state for users error', () => {
-    const mockError = new Error('Failed to load users');
-    vi.mocked(useUsers).mockReturnValue({
-      data: undefined,
-      error: mockError,
-      isLoading: false,
-      mutate: vi.fn(),
-    });
-    vi.mocked(useReaders).mockReturnValue({
-      data: mockReaders,
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    });
-
-    render(<Dashboard />);
-    expect(screen.getByText('Error loading users summary: Failed to load users')).toBeInTheDocument();
-  });
-
-  it('renders error state for readers error', () => {
-    const mockError = new Error('Failed to load readers');
-    vi.mocked(useUsers).mockReturnValue({
-      data: mockUsers,
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    });
-    vi.mocked(useReaders).mockReturnValue({
+  it('renders error state', () => {
+    const mockError = new Error('Failed to load dashboard');
+    vi.mocked(useDashboard).mockReturnValue({
       data: undefined,
       error: mockError,
       isLoading: false,
@@ -120,18 +66,12 @@ describe('Dashboard', () => {
     });
 
     render(<Dashboard />);
-    expect(screen.getByText('Error loading users summary: Failed to load readers')).toBeInTheDocument();
+    expect(screen.getByText('Error loading dashboard: Failed to load dashboard')).toBeInTheDocument();
   });
 
-  it('renders no data state when users data is empty', () => {
-    vi.mocked(useUsers).mockReturnValue({
-      data: [],
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    });
-    vi.mocked(useReaders).mockReturnValue({
-      data: mockReaders,
+  it('renders no data state', () => {
+    vi.mocked(useDashboard).mockReturnValue({
+      data: undefined,
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),
@@ -142,61 +82,18 @@ describe('Dashboard', () => {
   });
 
   it('renders dashboard with data', () => {
-    vi.mocked(useUsers).mockReturnValue({
-      data: mockUsers,
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    });
-    vi.mocked(useReaders).mockReturnValue({
-      data: mockReaders,
+    vi.mocked(useDashboard).mockReturnValue({
+      data: mockDashboardData,
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),
     });
 
     render(<Dashboard />);
-    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Test Affiliate Dashboard')).toBeInTheDocument();
     expect(screen.getByText('manager')).toBeInTheDocument();
     expect(screen.getByText('coordinator')).toBeInTheDocument();
     expect(screen.getByText('coach')).toBeInTheDocument();
-  });
-
-  it('filters out leavers from users data', () => {
-    vi.mocked(useUsers).mockReturnValue({
-      data: mockUsers,
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    });
-    vi.mocked(useReaders).mockReturnValue({
-      data: mockReaders,
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    });
-
-    render(<Dashboard />);
-    // Should not display leaver user Alice Brown
-    expect(screen.queryByText('leaver')).not.toBeInTheDocument();
-  });
-
-  it('filters out excluded reader statuses', () => {
-    vi.mocked(useUsers).mockReturnValue({
-      data: mockUsers,
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    });
-    vi.mocked(useReaders).mockReturnValue({
-      data: mockReaders,
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    });
-
-    render(<Dashboard />);
-    // Reader with status 'DO' should be filtered out
     expect(screen.getByText('Reader - TP1')).toBeInTheDocument();
   });
 
@@ -206,14 +103,8 @@ describe('Dashboard', () => {
       clipboard: { writeText: mockWriteText },
     });
 
-    vi.mocked(useUsers).mockReturnValue({
-      data: mockUsers,
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    });
-    vi.mocked(useReaders).mockReturnValue({
-      data: mockReaders,
+    vi.mocked(useDashboard).mockReturnValue({
+      data: mockDashboardData,
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),
@@ -231,14 +122,8 @@ describe('Dashboard', () => {
   });
 
   it('shows and hides copied message', async () => {
-    vi.mocked(useUsers).mockReturnValue({
-      data: mockUsers,
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    });
-    vi.mocked(useReaders).mockReturnValue({
-      data: mockReaders,
+    vi.mocked(useDashboard).mockReturnValue({
+      data: mockDashboardData,
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),
@@ -267,14 +152,8 @@ describe('Dashboard', () => {
       clipboard: { writeText: mockWriteText },
     });
 
-    vi.mocked(useUsers).mockReturnValue({
-      data: mockUsers,
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    });
-    vi.mocked(useReaders).mockReturnValue({
-      data: mockReaders,
+    vi.mocked(useDashboard).mockReturnValue({
+      data: mockDashboardData,
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),

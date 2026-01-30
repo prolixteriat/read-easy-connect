@@ -31,6 +31,11 @@ class DbLoans extends DbBase {
             if (!$status->success) { 
                 return $status; 
             }
+            
+            # Validate reader_id is numeric and positive
+            if (!is_numeric($params['reader_id']) || $params['reader_id'] <= 0) {
+                return new Status(false, 400, ['message' => 'Invalid reader_id']);
+            }
 
             # Check if user has access to this reader
             $reader_id = (int)$params['reader_id'];
@@ -38,17 +43,28 @@ class DbLoans extends DbBase {
                 return new Status(false, 403, ['message' => 'Access denied to this reader']);
             }
 
+            # Validate item name is not empty
+            if (empty(trim($params['item']))) {
+                return new Status(false, 400, ['message' => 'Item name cannot be empty']);
+            }
+            
             $sql = 'INSERT INTO loans (reader_id, item, loan_date, return_date, status) 
                     VALUES (:reader_id, :item, :loan_date, :return_date, :status)';
 
             $stmt = $this->conn->prepare($sql);
-            $stmt->execute([
+            if (!$stmt) {
+                throw new Exception('Failed to prepare loan insert query');
+            }
+            $result = $stmt->execute([
                 ':reader_id'    => $reader_id,
                 ':item'         => $params['item'],
                 ':loan_date'    => $params['loan_date'] ?? date('Y-m-d H:i:s'),
                 ':return_date'  => $params['return_date'] ?? null,
                 ':status'       => $params['status'] ?? 'loaned'
             ]);
+            if (!$result) {
+                throw new Exception('Failed to insert loan record');
+            }
 
             $loan_id = $this->conn->lastInsertId();
             $status = new Status(true, 200, ['loan_id' => (int)$loan_id]);
@@ -76,6 +92,11 @@ class DbLoans extends DbBase {
             $status = $this->validate_params($params, $required_params);
             if (!$status->success) { 
                 return $status; 
+            }
+            
+            # Validate loan_id is numeric and positive
+            if (!is_numeric($params['loan_id']) || $params['loan_id'] <= 0) {
+                return new Status(false, 400, ['message' => 'Invalid loan_id']);
             }
 
             $loan_id = (int)$params['loan_id'];

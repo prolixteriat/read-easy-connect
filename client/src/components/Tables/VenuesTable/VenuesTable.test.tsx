@@ -8,6 +8,11 @@ vi.mock('@hooks/useOrg', () => ({
   useVenues: vi.fn(),
 }));
 
+// Mock the useAuth hook
+vi.mock('../../../context/useAuth', () => ({
+  useAuth: vi.fn(() => ({ role: 'admin' })),
+}));
+
 // Mock the VTable component
 vi.mock('./VTable', () => ({
   VTable: vi.fn(({ data, onSave, showDisabled, setShowDisabled }) => (

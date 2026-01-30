@@ -7,9 +7,11 @@ DROP TABLE IF EXISTS `coaches`;
 DROP TABLE IF EXISTS `coordinators`;
 DROP TABLE IF EXISTS `lessons`;
 DROP TABLE IF EXISTS `loans`;
+DROP TABLE IF EXISTS `comments`;
 DROP TABLE IF EXISTS `reviews`;
 DROP TABLE IF EXISTS `login_attempts`;
 DROP TABLE IF EXISTS `managers`;
+DROP TABLE IF EXISTS `viewers`;
 DROP TABLE IF EXISTS `password_reset`;
 DROP TABLE IF EXISTS `readers`;
 DROP TABLE IF EXISTS `areas`;
@@ -78,10 +80,10 @@ CREATE TABLE `users` (
 	`first_name` VARCHAR(128) NOT NULL,
 	`last_name` VARCHAR(128) NOT NULL,
 	`email` VARCHAR(255) NOT NULL UNIQUE,
-	`password` VARCHAR(255) NOT NULL,                	
+	`password` VARCHAR(255) NOT NULL,
 	`password_reset` BOOLEAN NOT NULL DEFAULT TRUE,
 	`disabled` BOOLEAN NOT NULL DEFAULT FALSE,
-	`role` ENUM('admin', 'director', 'manager', 'coordinator', 'coach') NOT NULL,
+	`role` ENUM('admin', 'director', 'manager', 'coordinator', 'coach', 'viewer') NOT NULL,
 	`status` ENUM('active', 'onhold', 'leaver') NOT NULL DEFAULT 'onhold',
 	`last_login` DATETIME,
 	`last_logout` DATETIME,
@@ -110,12 +112,14 @@ CREATE TABLE `coaches` (
 	-- non-personal data
 	`email_consent` BOOLEAN NOT NULL DEFAULT FALSE,
 	`whatsapp_consent` BOOLEAN NOT NULL DEFAULT FALSE,
+	`use_email` BOOLEAN NOT NULL DEFAULT FALSE,
 	`dbs_completed` BOOLEAN NOT NULL DEFAULT FALSE,
 	`ref_completed` BOOLEAN NOT NULL DEFAULT FALSE,
 	`commitment_completed` BOOLEAN NOT NULL DEFAULT FALSE,
-	`training_booked` BOOLEAN NOT NULL DEFAULT FALSE,
-	`edib_train_completed` BOOLEAN NOT NULL DEFAULT FALSE,
-	`consol_train_completed` BOOLEAN NOT NULL DEFAULT FALSE,
+	`training` ENUM('not_booked', 'booked', 'completed') NOT NULL DEFAULT 'not_booked',
+	`edib_training` ENUM('not_booked', 'booked', 'completed') NOT NULL DEFAULT 'not_booked',
+	`consol_training` ENUM('not_booked', 'booked', 'completed') NOT NULL DEFAULT 'not_booked',
+	`consol_training_at` DATETIME,
 	`availability` VARCHAR(1024),
 	`preferences` VARCHAR(1024),
 	`notes` VARCHAR(1024),
@@ -167,6 +171,11 @@ CREATE TABLE `readers` (
 	`TP3_completion_at` DATETIME,
 	`TP4_completion_at` DATETIME,
 	`TP5_completion_at` DATETIME,
+	`TP1_certificate` BOOLEAN NOT NULL DEFAULT FALSE,
+	`TP2_certificate` BOOLEAN NOT NULL DEFAULT FALSE,
+	`TP3_certificate` BOOLEAN NOT NULL DEFAULT FALSE,
+	`TP4_certificate` BOOLEAN NOT NULL DEFAULT FALSE,
+	`TP5_certificate` BOOLEAN NOT NULL DEFAULT FALSE,
 	`ons4_1` BOOLEAN NOT NULL DEFAULT FALSE,
 	`ons4_2` BOOLEAN NOT NULL DEFAULT FALSE,
 	`ons4_3` BOOLEAN NOT NULL DEFAULT FALSE,
@@ -190,6 +199,19 @@ CREATE TABLE `loans` (
 	FOREIGN KEY (`reader_id`) REFERENCES `readers`(`reader_id`),
 
 	INDEX `idx_loans_reader_id` (`reader_id`)
+);
+
+CREATE TABLE `comments` (
+	`comment_id` INT AUTO_INCREMENT PRIMARY KEY,
+	`reader_id` INT NOT NULL,
+	`comment` VARCHAR(2048) NOT NULL,
+	`comment_at` DATETIME NOT NULL,
+	`quote_permission` BOOLEAN NOT NULL DEFAULT FALSE,
+	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+	FOREIGN KEY (`reader_id`) REFERENCES `readers`(`reader_id`),
+
+	INDEX `idx_notes_reader_id` (`reader_id`)
 );
 
 CREATE TABLE `lessons` (
@@ -256,6 +278,16 @@ CREATE TABLE `managers` (
 	FOREIGN KEY (`affiliate_id`) REFERENCES `affiliates`(`affiliate_id`),
 
 	INDEX `idx_managers_affiliate_id` (`affiliate_id`)
+);
+
+CREATE TABLE `viewers` (
+	`viewer_id` INT PRIMARY KEY,
+	`affiliate_id` INT NOT NULL,
+
+	FOREIGN KEY (`viewer_id`) REFERENCES `users`(`user_id`),
+	FOREIGN KEY (`affiliate_id`) REFERENCES `affiliates`(`affiliate_id`),
+
+	INDEX `idx_viewer_affiliate_id` (`affiliate_id`)
 );
 
 CREATE TABLE `audit` (

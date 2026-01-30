@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------
 
 require_once __DIR__ . '/tst/TstDbReports.php';
-require_once __DIR__ . '/utils/creds.php';
+require_once __DIR__ . '/tst/TstDbBase.php';
 
 # ------------------------------------------------------------------------------
 
@@ -18,18 +18,18 @@ class ReportsTest extends TestCase {
 
     protected Slim\App $app;
     protected TstDbReports $db;
+    protected TstDbBase $base;
     protected string $jwt_token;
     protected ServerRequestFactory $request_factory;
     protected StreamFactory $stream_factory;
-    protected array $tokens;
 
     # --------------------------------------------------------------------------
 
     protected function setUp(): void {
-        $this->tokens = TestTokens::get();
+        $this->base = new TstDbBase();
         $this->db = new TstDbReports();
         $this->app = AppFactory::create();
-        $this->jwt_token = $this->tokens['manager']; 
+        $this->jwt_token = $this->base->test_manager_jwt; 
         $this->request_factory = new ServerRequestFactory();
         $this->stream_factory = new StreamFactory();
 
@@ -37,8 +37,13 @@ class ReportsTest extends TestCase {
     }
     # --------------------------------------------------------------------------
 
+    protected function tearDown(): void {
+        $this->base->cleanup();
+    }
+    # --------------------------------------------------------------------------
+
     public function test_get_audit_logs(): void {
-        $this->jwt_token = $this->tokens['manager'];
+        $this->jwt_token = $this->base->test_manager_jwt;
         $request = $this->create_request('GET', '/reports/get-audit-logs');
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());
@@ -48,9 +53,9 @@ class ReportsTest extends TestCase {
     }
     # --------------------------------------------------------------------------
 
-    public function test_get_coaches_summary(): void {
-        $this->jwt_token = $this->tokens['manager'];
-        $request = $this->create_request('GET', '/reports/get-coaches-summary');
+    public function test_get_coach_detail(): void {
+        $this->jwt_token = $this->base->test_manager_jwt;
+        $request = $this->create_request('GET', '/reports/get-coach-detail');
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());
         $body = (string) $response->getBody();
@@ -59,9 +64,9 @@ class ReportsTest extends TestCase {
     }
     # --------------------------------------------------------------------------
 
-    public function test_get_readers_detail(): void {
-        $this->jwt_token = $this->tokens['manager'];
-        $request = $this->create_request('GET', '/reports/get-readers-detail');
+    public function test_get_reader_detail(): void {
+        $this->jwt_token = $this->base->test_manager_jwt;
+        $request = $this->create_request('GET', '/reports/get-reader-detail');
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());
         $body = (string) $response->getBody();
@@ -71,8 +76,8 @@ class ReportsTest extends TestCase {
     # --------------------------------------------------------------------------
 
     public function test_unauthorised_access(): void {
-        $this->jwt_token = $this->tokens['coach'];
-        $request = $this->create_request('GET', '/reports/get-coaches-summary');
+        $this->jwt_token = $this->base->test_coach_jwt;
+        $request = $this->create_request('GET', '/reports/get-coach-detail');
         $response = $this->app->handle($request);
         $this->assertEquals(403, $response->getStatusCode());
     }
@@ -97,16 +102,16 @@ class ReportsTest extends TestCase {
                     ->withStatus($status->code);
         });
 
-        $this->app->get('/reports/get-coaches-summary', function ($request, $response) {
-            $status = $this->db->get_coaches_summary($request);
+        $this->app->get('/reports/get-coach-detail', function ($request, $response) {
+            $status = $this->db->get_coach_detail($request);
             $response->getBody()->write($status->message);
             return $response
                     ->withHeader('Content-Type', 'application/json')
                     ->withStatus($status->code);
         });
 
-        $this->app->get('/reports/get-readers-detail', function ($request, $response) {
-            $status = $this->db->get_readers_detail($request);
+        $this->app->get('/reports/get-reader-detail', function ($request, $response) {
+            $status = $this->db->get_reader_detail($request);
             $response->getBody()->write($status->message);
             return $response
                     ->withHeader('Content-Type', 'application/json')

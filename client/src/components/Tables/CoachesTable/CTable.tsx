@@ -9,9 +9,9 @@ import { useAreas } from '@hooks/useOrg';
 
 import { editCoach, addCoach } from '@lib/api/apiCoaches';
 import { asString} from '@lib/helper';
-import { type TCoachStatus, type TUserStatus } from '@lib/types';
+import { type TCoachStatus, type TUserStatus, type TTrainingStatus } from '@lib/types';
 
-import { Button, ConfirmDialog, ErrorDialog, Loading } from '@components/Common';
+import { Button, ConfirmDialog, ErrorDialog, Loading, HoverHelp } from '@components/Common';
 import { BaseTable, useTableState, createSortableHeader, createStatusColumn } from '../BaseTable';
 
 // -----------------------------------------------------------------------------
@@ -66,9 +66,11 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
     dbs_completed: 0,
     ref_completed: 0,
     commitment_completed: 0,
-    training_booked: 0,
-    edib_train_completed: 0,
-    consol_train_completed: 0,
+    training: 'not_booked' as TTrainingStatus,
+    edib_training: 'not_booked' as TTrainingStatus,
+    consol_training: 'not_booked' as TTrainingStatus,
+    use_email: 0,
+    consol_training_at: '',
     availability: '',
     preferences: '',
     notes: '',
@@ -78,7 +80,7 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
     nok_telephone: '',
     nok_relationship: ''
   });
-  const { data: coachData } = useCoach(selectedRow?.coach_id || null);
+  const { data: coachData, mutate: mutateCoach } = useCoach(selectedRow?.coach_id || null);
 
   const copyToClipboard = useCallback(async () => {
     if (!data || data.length === 0) return;
@@ -108,9 +110,6 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
 
   const handlePersonalDataOpen = () => {
     if (selectedRow && coachData) {
-      console.log('Coach data:', coachData);
-      console.log('Telephone:', coachData?.telephone);
-      console.log('NOK Telephone:', coachData?.nok_telephone);
       const updates = personalDataUpdates[selectedRow.coach_id] || {};
       const data = { 
         ...coachData,
@@ -201,7 +200,19 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
       header: createSortableHeader('Last Name'),
     },
     createStatusColumn('status', statusMap),
-    createStatusColumn('user_status', userStatusMap),
+    {
+      accessorKey: 'user_status',
+      header: createSortableHeader('User Status'),
+      cell: ({ getValue }) => {
+        const userStatus = getValue() as string;
+        const styles = userStatusMap[userStatus as keyof typeof userStatusMap] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+        return (
+          <span className={`px-2 py-1 text-xs rounded-full ${styles.bg} ${styles.text}`}>
+            {userStatus}
+          </span>
+        );
+      },
+    },
     {
       accessorKey: 'area_name',
       header: createSortableHeader('Area'),
@@ -238,9 +249,11 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
     selectedRow.dbs_completed !== originalRow.dbs_completed ||
     selectedRow.ref_completed !== originalRow.ref_completed ||
     selectedRow.commitment_completed !== originalRow.commitment_completed ||
-    selectedRow.training_booked !== originalRow.training_booked ||
-    selectedRow.edib_train_completed !== originalRow.edib_train_completed ||
-    selectedRow.consol_train_completed !== originalRow.consol_train_completed ||
+    selectedRow.training !== originalRow.training ||
+    selectedRow.edib_training !== originalRow.edib_training ||
+    selectedRow.consol_training !== originalRow.consol_training ||
+    selectedRow.use_email !== originalRow.use_email ||
+    selectedRow.consol_training_at !== originalRow.consol_training_at ||
     selectedRow.availability !== originalRow.availability ||
     selectedRow.preferences !== originalRow.preferences ||
     selectedRow.notes !== originalRow.notes ||
@@ -306,9 +319,11 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
       dbs_completed: 0,
       ref_completed: 0,
       commitment_completed: 0,
-      training_booked: 0,
-      edib_train_completed: 0,
-      consol_train_completed: 0,
+      training: 'not_booked' as TTrainingStatus,
+      edib_training: 'not_booked' as TTrainingStatus,
+      consol_training: 'not_booked' as TTrainingStatus,
+      use_email: 0,
+      consol_training_at: '',
       availability: '',
       preferences: '',
       notes: '',
@@ -362,6 +377,8 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
       tableState.setIsSaving(true);
       const result = await editCoach({
         coach_id: selectedRow.coach_id,
+        first_name: selectedRow.first_name,
+        last_name: selectedRow.last_name,
         status: selectedRow.status,
         user_status: selectedRow.user_status,
         disabled: selectedRow.disabled,
@@ -373,9 +390,11 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
         dbs_completed: selectedRow.dbs_completed,
         ref_completed: selectedRow.ref_completed,
         commitment_completed: selectedRow.commitment_completed,
-        training_booked: selectedRow.training_booked,
-        edib_train_completed: selectedRow.edib_train_completed,
-        consol_train_completed: selectedRow.consol_train_completed,
+        training: selectedRow.training,
+        edib_training: selectedRow.edib_training,
+        consol_training: selectedRow.consol_training,
+        use_email: selectedRow.use_email,
+        consol_training_at: selectedRow.consol_training_at || undefined,
         availability: selectedRow.availability || undefined,
         preferences: selectedRow.preferences || undefined,
         notes: selectedRow.notes || undefined,
@@ -388,6 +407,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
       
       tableState.setIsSaving(false);
       if (result.success) {
+        // Force refresh individual coach data if status changed to leaver
+        if (selectedRow.user_status === 'leaver') {
+          mutateCoach?.();
+        }
         onSave(selectedRow);
         tableState.setIsOpen(false);
         tableState.setErrors({});
@@ -422,9 +445,11 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
       dbs_completed: newCoach.dbs_completed,
       ref_completed: newCoach.ref_completed,
       commitment_completed: newCoach.commitment_completed,
-      training_booked: newCoach.training_booked,
-      edib_train_completed: newCoach.edib_train_completed,
-      consol_train_completed: newCoach.consol_train_completed,
+      training: newCoach.training,
+      edib_training: newCoach.edib_training,
+      consol_training: newCoach.consol_training,
+      use_email: newCoach.use_email,
+      consol_training_at: newCoach.consol_training_at || undefined,
       availability: newCoach.availability || undefined,
       preferences: newCoach.preferences || undefined,
       notes: newCoach.notes || undefined,
@@ -454,9 +479,11 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
         dbs_completed: 0,
         ref_completed: 0,
         commitment_completed: 0,
-        training_booked: 0,
-        edib_train_completed: 0,
-        consol_train_completed: 0,
+        training: 'not_booked' as TTrainingStatus,
+        edib_training: 'not_booked' as TTrainingStatus,
+        consol_training: 'not_booked' as TTrainingStatus,
+        use_email: 0,
+        consol_training_at: '',
         availability: '',
         preferences: '',
         notes: '',
@@ -491,7 +518,6 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
       <p className='text-sm text-gray-600 mb-1'>{coach.email}</p>
       <div className='flex justify-between items-center text-xs text-gray-500'>
         <span>User: {coach.user_status}</span>
-        <span>{coach.disabled ? 'disabled' : 'enabled'}</span>
       </div>
       <p className='text-xs text-gray-500 mt-1'>Coordinator: {coach.coordinator_first_name} {coach.coordinator_last_name}</p>
     </div>
@@ -537,7 +563,7 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
       </BaseTable>
 
       {/* Edit Modal */}
-      <Dialog open={tableState.isOpen} onClose={() => tableState.setIsOpen(false)} className='relative z-50'>
+      <Dialog open={tableState.isOpen} onClose={() => {}} className='relative z-50'>
         <div className='fixed inset-0 bg-black/30' aria-hidden='true' />
         <div className='fixed inset-0 flex items-center justify-center p-4'>
           <DialogPanel className='w-full max-w-2xl rounded-xl bg-white p-6 shadow-lg'>
@@ -582,7 +608,7 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                 
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>Status</label>
+                    <label className='block text-sm font-medium text-gray-700'>Coach Status</label>
                     <select
                       className='w-full rounded-md border p-2'
                       value={selectedRow.status}
@@ -608,30 +634,7 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                   </div>
                 </div>
 
-                <div className='grid grid-cols-2 gap-3'>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700'>Disabled</label>
-                    <select
-                      className='w-full rounded-md border p-2'
-                      value={selectedRow.disabled}
-                      onChange={(e) => setSelectedRow({ ...selectedRow, disabled: Number(e.target.value) })}
-                    >
-                      <option value={0}>No</option>
-                      <option value={1}>Yes</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700'>Password Reset</label>
-                    <select
-                      className='w-full rounded-md border p-2'
-                      value={selectedRow.password_reset}
-                      onChange={(e) => setSelectedRow({ ...selectedRow, password_reset: Number(e.target.value) })}
-                    >
-                      <option value={0}>No</option>
-                      <option value={1}>Yes</option>
-                    </select>
-                  </div>
-                </div>
+
 
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
@@ -693,6 +696,20 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
 
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
+                    <label className='block text-sm font-medium text-gray-700'>
+                      Send System Emails
+                      <HoverHelp text='Automatically send emails such as review meeting invitations and ONS survey reminders directly to the Coach' />
+                    </label>
+                    <select
+                      className={`w-full rounded-md border p-2 ${selectedRow.use_email === 0 ? 'bg-red-100' : ''}`}
+                      value={selectedRow.use_email}
+                      onChange={(e) => setSelectedRow({ ...selectedRow, use_email: Number(e.target.value) })}
+                    >
+                      <option value={0}>No</option>
+                      <option value={1}>Yes</option>
+                    </select>
+                  </div>
+                  <div>
                     <label className='block text-sm font-medium text-gray-700'>DBS Completed</label>
                     <select
                       className={`w-full rounded-md border p-2 ${selectedRow.dbs_completed === 0 ? 'bg-red-100' : ''}`}
@@ -703,6 +720,9 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                       <option value={1}>Yes</option>
                     </select>
                   </div>
+                </div>
+
+                <div className='grid grid-cols-2 gap-3'>
                   <div>
                     <label className='block text-sm font-medium text-gray-700'>References Completed</label>
                     <select
@@ -714,9 +734,6 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                       <option value={1}>Yes</option>
                     </select>
                   </div>
-                </div>
-
-                <div className='grid grid-cols-2 gap-3'>
                   <div>
                     <label className='block text-sm font-medium text-gray-700'>Commitment Completed</label>
                     <select
@@ -728,41 +745,56 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                       <option value={1}>Yes</option>
                     </select>
                   </div>
+                </div>
+
+                <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>Training Booked</label>
+                    <label className='block text-sm font-medium text-gray-700'>Coach Training</label>
                     <select
-                      className={`w-full rounded-md border p-2 ${selectedRow.training_booked === 0 ? 'bg-red-100' : ''}`}
-                      value={selectedRow.training_booked}
-                      onChange={(e) => setSelectedRow({ ...selectedRow, training_booked: Number(e.target.value) })}
+                      className={`w-full rounded-md border p-2 ${selectedRow.training === 'not_booked' ? 'bg-red-100' : selectedRow.training === 'booked' ? 'bg-yellow-100' : ''}`}
+                      value={selectedRow.training}
+                      onChange={(e) => setSelectedRow({ ...selectedRow, training: e.target.value as TTrainingStatus })}
                     >
-                      <option value={0}>No</option>
-                      <option value={1}>Yes</option>
+                      <option value='not_booked'>Not Booked</option>
+                      <option value='booked'>Booked</option>
+                      <option value='completed'>Completed</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700'>EDIB Training</label>
+                    <select
+                      className={`w-full rounded-md border p-2 ${selectedRow.edib_training === 'not_booked' ? 'bg-red-100' : selectedRow.edib_training === 'booked' ? 'bg-yellow-100' : ''}`}
+                      value={selectedRow.edib_training}
+                      onChange={(e) => setSelectedRow({ ...selectedRow, edib_training: e.target.value as TTrainingStatus })}
+                    >
+                      <option value='not_booked'>Not Booked</option>
+                      <option value='booked'>Booked</option>
+                      <option value='completed'>Completed</option>
                     </select>
                   </div>
                 </div>
 
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>EDIB Training Completed</label>
+                    <label className='block text-sm font-medium text-gray-700'>Consolidation Training</label>
                     <select
-                      className={`w-full rounded-md border p-2 ${selectedRow.edib_train_completed === 0 ? 'bg-red-100' : ''}`}
-                      value={selectedRow.edib_train_completed}
-                      onChange={(e) => setSelectedRow({ ...selectedRow, edib_train_completed: Number(e.target.value) })}
+                      className={`w-full rounded-md border p-2 ${selectedRow.consol_training === 'not_booked' ? 'bg-red-100' : selectedRow.consol_training === 'booked' ? 'bg-yellow-100' : ''}`}
+                      value={selectedRow.consol_training}
+                      onChange={(e) => setSelectedRow({ ...selectedRow, consol_training: e.target.value as TTrainingStatus })}
                     >
-                      <option value={0}>No</option>
-                      <option value={1}>Yes</option>
+                      <option value='not_booked'>Not Booked</option>
+                      <option value='booked'>Booked</option>
+                      <option value='completed'>Completed</option>
                     </select>
                   </div>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>Consol Training Completed</label>
-                    <select
-                      className={`w-full rounded-md border p-2 ${selectedRow.consol_train_completed === 0 ? 'bg-red-100' : ''}`}
-                      value={selectedRow.consol_train_completed}
-                      onChange={(e) => setSelectedRow({ ...selectedRow, consol_train_completed: Number(e.target.value) })}
-                    >
-                      <option value={0}>No</option>
-                      <option value={1}>Yes</option>
-                    </select>
+                    <label className='block text-sm font-medium text-gray-700'>Consolidation Training Date</label>
+                    <input
+                      type='date'
+                      className='w-full rounded-md border p-2'
+                      value={selectedRow.consol_training_at ? selectedRow.consol_training_at.split('T')[0].split(' ')[0] : ''}
+                      onChange={(e) => setSelectedRow({ ...selectedRow, consol_training_at: e.target.value })}
+                    />
                   </div>
                 </div>
 
@@ -840,7 +872,7 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
       />
       
       {/* Add Coach Modal */}
-      <Dialog open={isAddOpen} onClose={() => setIsAddOpen(false)} className='relative z-50'>
+      <Dialog open={isAddOpen} onClose={() => {}} className='relative z-50'>
         <div className='fixed inset-0 bg-black/30' aria-hidden='true' />
         <div className='fixed inset-0 flex items-center justify-center p-4'>
           <DialogPanel className='w-full max-w-2xl rounded-xl bg-white p-6 shadow-lg'>
@@ -894,7 +926,7 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
               
               <div className='grid grid-cols-2 gap-3'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Status</label>
+                  <label className='block text-sm font-medium text-gray-700'>Coach Status</label>
                   <select
                     className='w-full rounded-md border p-2'
                     value={newCoach.status}
@@ -982,6 +1014,20 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
 
               <div className='grid grid-cols-2 gap-3'>
                 <div>
+                  <label className='block text-sm font-medium text-gray-700'>
+                    Send System Emails
+                    <HoverHelp text='Automatically send emails such as review meeting invitations and ONS survey reminders directly to the Coach' />
+                  </label>
+                  <select
+                    className={`w-full rounded-md border p-2 ${newCoach.use_email === 0 ? 'bg-red-100' : ''}`}
+                    value={newCoach.use_email}
+                    onChange={(e) => setNewCoach({ ...newCoach, use_email: Number(e.target.value) })}
+                  >
+                    <option value={0}>No</option>
+                    <option value={1}>Yes</option>
+                  </select>
+                </div>
+                <div>
                   <label className='block text-sm font-medium text-gray-700'>DBS Completed</label>
                   <select
                     className={`w-full rounded-md border p-2 ${newCoach.dbs_completed === 0 ? 'bg-red-100' : ''}`}
@@ -992,6 +1038,9 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                     <option value={1}>Yes</option>
                   </select>
                 </div>
+              </div>
+
+              <div className='grid grid-cols-2 gap-3'>
                 <div>
                   <label className='block text-sm font-medium text-gray-700'>References Completed</label>
                   <select
@@ -1003,9 +1052,6 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                     <option value={1}>Yes</option>
                   </select>
                 </div>
-              </div>
-
-              <div className='grid grid-cols-2 gap-3'>
                 <div>
                   <label className='block text-sm font-medium text-gray-700'>Commitment Completed</label>
                   <select
@@ -1017,41 +1063,56 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                     <option value={1}>Yes</option>
                   </select>
                 </div>
+              </div>
+
+              <div className='grid grid-cols-2 gap-3'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Training Booked</label>
+                  <label className='block text-sm font-medium text-gray-700'>Coach Training</label>
                   <select
-                    className={`w-full rounded-md border p-2 ${newCoach.training_booked === 0 ? 'bg-red-100' : ''}`}
-                    value={newCoach.training_booked}
-                    onChange={(e) => setNewCoach({ ...newCoach, training_booked: Number(e.target.value) })}
+                    className={`w-full rounded-md border p-2 ${newCoach.training === 'not_booked' ? 'bg-red-100' : newCoach.training === 'booked' ? 'bg-yellow-100' : ''}`}
+                    value={newCoach.training}
+                    onChange={(e) => setNewCoach({ ...newCoach, training: e.target.value as TTrainingStatus })}
                   >
-                    <option value={0}>No</option>
-                    <option value={1}>Yes</option>
+                    <option value='not_booked'>Not Booked</option>
+                    <option value='booked'>Booked</option>
+                    <option value='completed'>Completed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700'>EDIB Training</label>
+                  <select
+                    className={`w-full rounded-md border p-2 ${newCoach.edib_training === 'not_booked' ? 'bg-red-100' : newCoach.edib_training === 'booked' ? 'bg-yellow-100' : ''}`}
+                    value={newCoach.edib_training}
+                    onChange={(e) => setNewCoach({ ...newCoach, edib_training: e.target.value as TTrainingStatus })}
+                  >
+                    <option value='not_booked'>Not Booked</option>
+                    <option value='booked'>Booked</option>
+                    <option value='completed'>Completed</option>
                   </select>
                 </div>
               </div>
 
               <div className='grid grid-cols-2 gap-3'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>EDIB Training Completed</label>
+                  <label className='block text-sm font-medium text-gray-700'>Consolidation Training</label>
                   <select
-                    className={`w-full rounded-md border p-2 ${newCoach.edib_train_completed === 0 ? 'bg-red-100' : ''}`}
-                    value={newCoach.edib_train_completed}
-                    onChange={(e) => setNewCoach({ ...newCoach, edib_train_completed: Number(e.target.value) })}
+                    className={`w-full rounded-md border p-2 ${newCoach.consol_training === 'not_booked' ? 'bg-red-100' : newCoach.consol_training === 'booked' ? 'bg-yellow-100' : ''}`}
+                    value={newCoach.consol_training}
+                    onChange={(e) => setNewCoach({ ...newCoach, consol_training: e.target.value as TTrainingStatus })}
                   >
-                    <option value={0}>No</option>
-                    <option value={1}>Yes</option>
+                    <option value='not_booked'>Not Booked</option>
+                    <option value='booked'>Booked</option>
+                    <option value='completed'>Completed</option>
                   </select>
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Consol Training Completed</label>
-                  <select
-                    className={`w-full rounded-md border p-2 ${newCoach.consol_train_completed === 0 ? 'bg-red-100' : ''}`}
-                    value={newCoach.consol_train_completed}
-                    onChange={(e) => setNewCoach({ ...newCoach, consol_train_completed: Number(e.target.value) })}
-                  >
-                    <option value={0}>No</option>
-                    <option value={1}>Yes</option>
-                  </select>
+                  <label className='block text-sm font-medium text-gray-700'>Consolidation Training Date</label>
+                  <input
+                    type='date'
+                    className='w-full rounded-md border p-2'
+                    value={newCoach.consol_training_at}
+                    onChange={(e) => setNewCoach({ ...newCoach, consol_training_at: e.target.value })}
+                  />
                 </div>
               </div>
 
@@ -1112,7 +1173,7 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
       />
 
       {/* Personal Data Modal */}
-      <Dialog open={isPersonalDataOpen} onClose={() => setIsPersonalDataOpen(false)} className='relative z-50'>
+      <Dialog open={isPersonalDataOpen} onClose={() => {}} className='relative z-50'>
         <div className='fixed inset-0 bg-black/30' aria-hidden='true' />
         <div className='fixed inset-0 flex items-center justify-center p-4'>
           <DialogPanel className='w-full max-w-md rounded-xl bg-white p-6 shadow-lg'>
@@ -1189,7 +1250,7 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
       </Dialog>
 
       {/* Add Coach Personal Data Modal */}
-      <Dialog open={isAddPersonalDataOpen} onClose={() => setIsAddPersonalDataOpen(false)} className='relative z-50'>
+      <Dialog open={isAddPersonalDataOpen} onClose={() => {}} className='relative z-50'>
         <div className='fixed inset-0 bg-black/30' aria-hidden='true' />
         <div className='fixed inset-0 flex items-center justify-center p-4'>
           <DialogPanel className='w-full max-w-md rounded-xl bg-white p-6 shadow-lg'>

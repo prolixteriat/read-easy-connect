@@ -2,8 +2,8 @@
 
 # ------------------------------------------------------------------------------
 
+require_once __DIR__ . '/tst/TstDbBase.php';
 require_once __DIR__ . '/tst/TstDbCoaches.php';
-require_once __DIR__ . '/utils/creds.php';
 require_once __DIR__ . '/../private/db/DbUsers.php';
 
 # ------------------------------------------------------------------------------
@@ -17,24 +17,29 @@ use Slim\Psr7\Factory\StreamFactory;
 
 class CoachesTest extends TestCase {
 
-    protected Slim\App $app;
+    protected TstDbBase $base;
     protected TstDbCoaches $db;
-    protected string $jwt_token;
+    protected Slim\App $app;
+    protected string|null $jwt_token;
     protected ServerRequestFactory $request_factory;
     protected StreamFactory $stream_factory;
-    protected array $tokens;
 
     # --------------------------------------------------------------------------
 
     protected function setUp(): void {
-        $this->tokens = TestTokens::get();
+        $this->base = new TstDbBase();
         $this->db = new TstDbCoaches();
         $this->app = AppFactory::create();
-        $this->jwt_token = $this->tokens['manager']; 
+        $this->jwt_token = $this->base->test_manager_jwt;
         $this->request_factory = new ServerRequestFactory();
         $this->stream_factory = new StreamFactory();
-
         $this->add_routes();
+    }
+    # --------------------------------------------------------------------------
+
+    protected function tearDown(): void {
+        $this->base->cleanup();
+        unset($this->base);
     }
     # --------------------------------------------------------------------------
 
@@ -43,13 +48,13 @@ class CoachesTest extends TestCase {
             'first_name' => 'Test',
             'last_name' => 'Coach',
             'email' => 'testcoach2@test.com',
-            'coordinator_id' => '5',
+            'coordinator_id' => $this->base->test_coordinator_id,
             'address' => '123 Test St',
             'telephone' => '555-1234'
         ];
         
         try {
-            $this->jwt_token = $this->tokens['coordinator'];
+            $this->jwt_token = $this->base->test_coordinator_jwt;
             $request = $this->create_request('POST', '/coaches/add-coach', $payload);
             $response = $this->app->handle($request);
             $this->assertEquals(200, $response->getStatusCode());
@@ -66,14 +71,14 @@ class CoachesTest extends TestCase {
         $test_email = 'testeditcoach@test.com';
         $coach_id = null;
         try {
-            $this->jwt_token = $this->tokens['coordinator'];
+            $this->jwt_token = $this->base->test_coordinator_jwt;
             
             # Add new test coach
             $add_payload = [
                 'first_name' => 'Test',
                 'last_name' => 'EditCoach',
                 'email' => $test_email,
-                'coordinator_id' => '5',
+                'coordinator_id' => $this->base->test_coordinator_id,
                 'address' => '123 Test St',
                 'telephone' => '555-1234',
                 'nok_name' => 'This is personal data'
@@ -143,13 +148,14 @@ class CoachesTest extends TestCase {
         } finally {
             if ($coach_id) {
                 $this->db->test_delete($test_email);
+                $this->db->test_delete($coach_data3['email']);
             }
         }
     }
     # --------------------------------------------------------------------------
 
     public function test_get_coaches(): void {
-        $this->jwt_token = $this->tokens['coordinator'];
+        $this->jwt_token = $this->base->test_coordinator_jwt;
         $request = $this->create_request('GET', '/coaches/get-coaches');
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());
@@ -160,8 +166,8 @@ class CoachesTest extends TestCase {
     # --------------------------------------------------------------------------
 
     public function test_get_coach(): void {
-        $this->jwt_token = $this->tokens['coordinator'];
-        $request = $this->create_request('GET', "/coaches/get-coach?coach_id=" . TEST_COACH_ID);
+        $this->jwt_token = $this->base->test_coordinator_jwt;
+        $request = $this->create_request('GET', "/coaches/get-coach?coach_id=" . $this->base->test_coach_id);
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());
         $body = (string) $response->getBody();
@@ -171,7 +177,7 @@ class CoachesTest extends TestCase {
     # --------------------------------------------------------------------------
 
     public function test_unauthorized_access(): void {
-        $this->jwt_token = $this->tokens['coach'];
+        $this->jwt_token = $this->base->test_coach_jwt;
         $request = $this->create_request('GET', '/coaches/get-coaches');
         $response = $this->app->handle($request);
         $this->assertEquals(403, $response->getStatusCode());

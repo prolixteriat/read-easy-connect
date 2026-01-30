@@ -12,4 +12,3 @@ A PHP script which provides API endpoints for the MySQL database. It provides ge
 ##	Installation
 - A **composer.json** file is provided to assist with installation of the necessary dependencies. PHPUnit is included as a dev dependency.
 - Within the **private** directory, it will be necessary to rename and populate the **creds_.php** and **config_.php** files to **creds.php** and **config.php**, respectively. Once renamed, populate the variables contained within each as appropriate for your environment. Setting the `ENVIRONMENT` variable within the **config.php** file allows quick switching between different environments.
-- Similarly, within the **tests** directory, rename the **creds_.php** file to **creds.php** and populate accordingly.

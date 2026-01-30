@@ -2,9 +2,9 @@ import React, { Suspense } from 'react';
 
 import { 
   ReviewsCalendar, 
-  AuditReport, CoachesSummaryReport, ReadersDetailReport, ReviewsReport,
+  AuditReport, CoachDetailReport, ReaderDetailReport, ReviewsReport,
   AreasTable, CoachesTable, ReadersTable, UsersTable, LoansTable, TextPage, 
-  VenuesTable
+  TrainingTable, VenuesTable
  } from '@lib/lazy';
 
  import { Loading } from '@components/Common';
@@ -23,7 +23,7 @@ const aboutRoutes: RouteItem =  {
   label: 'About',
   element: <div>About</div>,
   children: [
-    { path: '/about/contact', label: 'Contact', 
+    { path: '/about/contact-us', label: 'Contact Us', 
       element: <Suspense fallback={<Loading />}><TextPage blockType='contact' /></Suspense> },
     { path: '/about/privacy', label: 'Privacy', 
       element: <Suspense fallback={<Loading />}><TextPage blockType='privacy' /></Suspense> },
@@ -60,6 +60,8 @@ const roleSpecificRoutes: Record<string, RouteItem[]> = {
       children: [
         { path: '/organisation/managers', label: 'Managers', 
           element: <Suspense fallback={<Loading />}><UsersTable roleType='manager'/></Suspense> },
+        { path: '/organisation/viewers', label: 'Info Viewers', 
+          element: <Suspense fallback={<Loading />}><UsersTable roleType='viewer'/></Suspense> },
         { path: '/organisation/coordinators', label: 'Coordinators', 
           element: <Suspense fallback={<Loading />}><UsersTable roleType='coordinator'/></Suspense> },
         { path: '/organisation/coaches', label: 'Coaches', 
@@ -96,10 +98,12 @@ const roleSpecificRoutes: Record<string, RouteItem[]> = {
       label: 'Reports',
       element: <div>Manager Reports</div>,
       children: [
-        { path: '/reports/coaches-summary', label: 'Coaches Summary', 
-          element: <Suspense fallback={<Loading />}><CoachesSummaryReport /></Suspense> },
-        { path: '/reports/readers-detail', label: 'Readers Detail', 
-          element: <Suspense fallback={<Loading />}><ReadersDetailReport /></Suspense> },
+        { path: '/reports/coach-detail', label: 'Coach Detail', 
+          element: <Suspense fallback={<Loading />}><CoachDetailReport /></Suspense> },
+        { path: '/reports/training', label: 'Coach Training', 
+          element: <Suspense fallback={<Loading />}><TrainingTable /></Suspense> },
+        { path: '/reports/reader-detail', label: 'Reader Detail', 
+          element: <Suspense fallback={<Loading />}><ReaderDetailReport /></Suspense> },
         { path: '/reports/audit-log', label: 'Audit Log', 
           element: <Suspense fallback={<Loading />}><AuditReport /></Suspense> },
       ],
@@ -136,12 +140,38 @@ const roleSpecificRoutes: Record<string, RouteItem[]> = {
       label: 'Reports',
       element: <div>Coordinator Reports</div>,
       children: [
-        { path: '/reports/coaches-summary', label: 'Coaches Summary', 
-          element: <Suspense fallback={<Loading />}><CoachesSummaryReport /></Suspense> },
-        { path: '/reports/readers-detail', label: 'Readers Detail', 
-          element: <Suspense fallback={<Loading />}><ReadersDetailReport /></Suspense> },
+        { path: '/reports/coach-detail', label: 'Coach Detail', 
+          element: <Suspense fallback={<Loading />}><CoachDetailReport /></Suspense> },
+        { path: '/reports/training', label: 'Coach Training', 
+          element: <Suspense fallback={<Loading />}><TrainingTable /></Suspense> },
+        { path: '/reports/reader-detail', label: 'Reader Detail', 
+          element: <Suspense fallback={<Loading />}><ReaderDetailReport /></Suspense> },
         { path: '/reports/reviews', label: 'Reviews', 
           element: <Suspense fallback={<Loading />}><ReviewsReport /></Suspense> },
+      ],
+    },
+  ],
+
+  viewer: [
+    {
+      path: '/places',
+      label: 'Places',
+      element: <div>Manager Places</div>,
+      children: [
+        { path: '/organisation/venues', label: 'Venues', 
+          element: <Suspense fallback={<Loading />}><VenuesTable /></Suspense> },
+      ],
+    },
+
+    {
+      path: '/reports',
+      label: 'Reports',
+      element: <div>Manager Reports</div>,
+      children: [
+        { path: '/reports/coach-detail', label: 'Coach Detail', 
+          element: <Suspense fallback={<Loading />}><CoachDetailReport /></Suspense> },
+        { path: '/reports/reader-detail', label: 'Reader Detail', 
+          element: <Suspense fallback={<Loading />}><ReaderDetailReport /></Suspense> }
       ],
     },
   ],

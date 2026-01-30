@@ -1,4 +1,4 @@
-import { useCoachesSummary } from '@hooks/useReports';
+import { useCoachDetail } from '@hooks/useReports';
 import { Loading } from '@components/Common';
 import { useCallback, useState } from 'react';
 import { Copy } from 'lucide-react';
@@ -19,7 +19,7 @@ type CoachesSummary = {
 // -----------------------------------------------------------------------------
 
 export default function CoachesSummaryTable(): React.JSX.Element {
-  const { data, isLoading, error } = useCoachesSummary();
+  const { data, isLoading, error } = useCoachDetail();
   const [showCopied, setShowCopied] = useState(false);
 
   const copyToClipboard = useCallback(async () => {

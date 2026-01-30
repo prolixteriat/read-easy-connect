@@ -22,9 +22,9 @@ $app->get('/reports/get-audit-logs', function (Request $request, Response $respo
 });
 # ------------------------------------------------------------------------------
 
-$app->get('/reports/get-coaches-summary', function (Request $request, Response $response) {
+$app->get('/reports/get-coach-detail', function (Request $request, Response $response) {
     $db = new DbReports();
-    $status = $db->get_coaches_summary($request);
+    $status = $db->get_coach_detail($request);
     
     $response->getBody()->write($status->message);
     return $response
@@ -33,9 +33,20 @@ $app->get('/reports/get-coaches-summary', function (Request $request, Response $
 });
 # ------------------------------------------------------------------------------
 
-$app->get('/reports/get-readers-detail', function (Request $request, Response $response) {
+$app->get('/reports/get-reader-detail', function (Request $request, Response $response) {
     $db = new DbReports();
-    $status = $db->get_readers_detail($request);
+    $status = $db->get_reader_detail($request);
+    
+    $response->getBody()->write($status->message);
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus($status->code);
+});
+# ------------------------------------------------------------------------------
+
+$app->get('/reports/get-dashboard', function (Request $request, Response $response) {
+    $db = new DbReports();
+    $status = $db->get_dashboard($request);
     
     $response->getBody()->write($status->message);
     return $response

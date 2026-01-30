@@ -17,17 +17,22 @@ const getAuditLogsUrl = (type?: string, startDate?: string, endDate?: string): s
     return params.toString() ? `${url}?${params.toString()}` : url;
 }
 
-const getCoachesSummaryUrl = (): string => {
-    return `${apiBaseUrl}/reports/get-coaches-summary`;
+const getCoachDetailUrl = (): string => {
+    return `${apiBaseUrl}/reports/get-coach-detail`;
 }
 
-const getReadersDetailUrl = (): string => {
-    return `${apiBaseUrl}/reports/get-readers-detail`;
+const getReaderDetailUrl = (): string => {
+    return `${apiBaseUrl}/reports/get-reader-detail`;
+}
+
+const getDashboardUrl = (): string => {
+    return `${apiBaseUrl}/reports/get-dashboard`;
 }
 
 const auditLogsFetcher = (data: string[]) => fetcherAuth(data, AuditLogsSchemaArray);
-const coachesSummaryFetcher = (data: string[]) => fetcherAuth(data, CoachesSummarySchemaArray);
-const readersDetailFetcher = (data: string[]) => fetcherAuth(data, ReadersDetailSchemaArray);
+const coachDetailFetcher = (data: string[]) => fetcherAuth(data, CoachDetailSchemaArray);
+const readerDetailFetcher = (data: string[]) => fetcherAuth(data, ReaderDetailSchemaArray);
+const dashboardFetcher = (data: string[]) => fetcherAuth(data, DashboardSchema);
 
 // -----------------------------------------------------------------------------
 
@@ -46,7 +51,7 @@ const AuditLogsSchema = z.object({
     affiliate_name: z.string(),
 });
 
-const CoachesSummarySchema = z.union([
+const CoachDetailSchema = z.union([
     z.object({
         user_id: z.number().optional(),
         coordinator_name: z.string(),
@@ -62,7 +67,7 @@ const CoachesSummarySchema = z.union([
     }).catchall(z.number())
 ]);
 
-const ReadersDetailSchema = z.object({
+const ReaderDetailSchema = z.object({
     area_id: z.number().nullable(),
     area_name: z.string().nullable(),
     coordinator_id: z.number().nullable(),
@@ -79,13 +84,63 @@ const ReadersDetailSchema = z.object({
     TP5: z.number(),
 });
 
+const DashboardSchema = z.object({
+    affiliate: z.string(),
+    manager: z.object({
+        active: z.number(),
+        onhold: z.number(),
+        total: z.number(),
+    }),
+    viewer: z.object({
+        active: z.number(),
+        onhold: z.number(),
+        total: z.number(),
+    }),
+    coordinator: z.object({
+        active: z.number(),
+        onhold: z.number(),
+        total: z.number(),
+    }),
+    coach: z.object({
+        active: z.number(),
+        onhold: z.number(),
+        total: z.number(),
+    }),
+    reader_TP1: z.object({
+        active: z.number(),
+        onhold: z.number(),
+        total: z.number(),
+    }),
+    reader_TP2: z.object({
+        active: z.number(),
+        onhold: z.number(),
+        total: z.number(),
+    }),
+    reader_TP3: z.object({
+        active: z.number(),
+        onhold: z.number(),
+        total: z.number(),
+    }),
+    reader_TP4: z.object({
+        active: z.number(),
+        onhold: z.number(),
+        total: z.number(),
+    }),
+    reader_TP5: z.object({
+        active: z.number(),
+        onhold: z.number(),
+        total: z.number(),
+    }),
+});
+
 const AuditLogsSchemaArray = z.array(AuditLogsSchema);
-const CoachesSummarySchemaArray = z.array(CoachesSummarySchema);
-const ReadersDetailSchemaArray = z.array(ReadersDetailSchema);
+const CoachDetailSchemaArray = z.array(CoachDetailSchema);
+const ReaderDetailSchemaArray = z.array(ReaderDetailSchema);
 
 export type TAuditLogsSchema = z.TypeOf<typeof AuditLogsSchemaArray>;
-export type TCoachesSummarySchema = z.TypeOf<typeof CoachesSummarySchemaArray>;
-export type TReadersDetailSchema = z.TypeOf<typeof ReadersDetailSchemaArray>;
+export type TCoachDetailSchema = z.TypeOf<typeof CoachDetailSchemaArray>;
+export type TReaderDetailSchema = z.TypeOf<typeof ReaderDetailSchemaArray>;
+export type TDashboardSchema = z.TypeOf<typeof DashboardSchema>;
 
 // -----------------------------------------------------------------------------
 
@@ -116,22 +171,22 @@ export function useAuditLogs(type?: string, startDate?: string, endDate?: string
 }
 // -----------------------------------------------------------------------------
 
-export interface IuseCoachesSummary {
-    data: TCoachesSummarySchema | undefined;
+export interface IuseCoachDetail {
+    data: TCoachDetailSchema | undefined;
     error: Error | undefined;
     isLoading: boolean | undefined;
-    mutate: KeyedMutator<TCoachesSummarySchema> | undefined;
+    mutate: KeyedMutator<TCoachDetailSchema> | undefined;
 }
 
-export function useCoachesSummary(): IuseCoachesSummary {
-    const searchUrl = getCoachesSummaryUrl();
+export function useCoachDetail(): IuseCoachDetail {
+    const searchUrl = getCoachDetailUrl();
     const token = new JwtManager().getToken();
     const { data, error, isLoading, mutate } = useSWR([searchUrl, token], 
-        coachesSummaryFetcher, { 
+        coachDetailFetcher, { 
             refreshInterval: 5 * 60 * 1000,
       });
     
-    const response: IuseCoachesSummary = { 
+    const response: IuseCoachDetail = { 
         data: data, 
         error: error, 
         isLoading: isLoading,
@@ -142,22 +197,22 @@ export function useCoachesSummary(): IuseCoachesSummary {
 }
 // -----------------------------------------------------------------------------
 
-export interface IuseReadersDetail {
-    data: TReadersDetailSchema | undefined;
+export interface IuseReaderDetail {
+    data: TReaderDetailSchema | undefined;
     error: Error | undefined;
     isLoading: boolean | undefined;
-    mutate: KeyedMutator<TReadersDetailSchema> | undefined;
+    mutate: KeyedMutator<TReaderDetailSchema> | undefined;
 }
 
-export function useReadersDetail(): IuseReadersDetail {
-    const searchUrl = getReadersDetailUrl();
+export function useReaderDetail(): IuseReaderDetail {
+    const searchUrl = getReaderDetailUrl();
     const token = new JwtManager().getToken();
     const { data, error, isLoading, mutate } = useSWR([searchUrl, token], 
-        readersDetailFetcher, { 
+        readerDetailFetcher, { 
             refreshInterval: 5 * 60 * 1000,
       });
     
-    const response: IuseReadersDetail = { 
+    const response: IuseReaderDetail = { 
         data: data, 
         error: error, 
         isLoading: isLoading,
@@ -169,3 +224,28 @@ export function useReadersDetail(): IuseReadersDetail {
 // -----------------------------------------------------------------------------
 // End
 // -----------------------------------------------------------------------------
+
+export interface IuseDashboard {
+    data: TDashboardSchema | undefined;
+    error: Error | undefined;
+    isLoading: boolean | undefined;
+    mutate: KeyedMutator<TDashboardSchema> | undefined;
+}
+
+export function useDashboard(): IuseDashboard {
+    const searchUrl = getDashboardUrl();
+    const token = new JwtManager().getToken();
+    const { data, error, isLoading, mutate } = useSWR([searchUrl, token], 
+        dashboardFetcher, { 
+            refreshInterval: 5 * 60 * 1000,
+      });
+    
+    const response: IuseDashboard = { 
+        data: data, 
+        error: error, 
+        isLoading: isLoading,
+        mutate: mutate
+    };
+
+    return response;
+}

@@ -89,6 +89,7 @@ describe('Navbar', () => {
     vi.mocked(useAuth).mockReturnValue({
       role: null,
       setRole: vi.fn(),
+      loading: false,
     });
 
     render(
@@ -105,6 +106,7 @@ describe('Navbar', () => {
     vi.mocked(useAuth).mockReturnValue({
       role: 'manager',
       setRole: vi.fn(),
+      loading: false,
     });
 
     render(
@@ -121,6 +123,7 @@ describe('Navbar', () => {
     vi.mocked(useAuth).mockReturnValue({
       role: null,
       setRole: vi.fn(),
+      loading: false,
     });
 
     render(
@@ -141,6 +144,7 @@ describe('Navbar', () => {
     vi.mocked(useAuth).mockReturnValue({
       role: 'manager',
       setRole: vi.fn(),
+      loading: false,
     });
 
     render(
@@ -163,6 +167,7 @@ describe('Navbar', () => {
     vi.mocked(useAuth).mockReturnValue({
       role: 'manager',
       setRole: mockSetRole,
+      loading: false,
     });
 
     render(
@@ -188,6 +193,7 @@ describe('Navbar', () => {
     vi.mocked(useAuth).mockReturnValue({
       role: 'manager',
       setRole: vi.fn(),
+      loading: false,
     });
 
     render(
@@ -203,6 +209,7 @@ describe('Navbar', () => {
     vi.mocked(useAuth).mockReturnValue({
       role: 'manager',
       setRole: vi.fn(),
+      loading: false,
     });
 
     render(

@@ -20,6 +20,10 @@ vi.mock('@hooks/useOrg', () => ({
   useVenues: vi.fn(),
 }));
 
+vi.mock('@hooks/useCoaches', () => ({
+  useCoaches: vi.fn(),
+}));
+
 // Mock react-big-calendar
 vi.mock('react-big-calendar', () => ({
   Calendar: vi.fn(({ events, onSelectEvent, onSelectSlot }) => (
@@ -52,8 +56,9 @@ vi.mock('@components/Common', () => ({
 
 // Mock JwtManager
 vi.mock('@lib/jwtManager', () => ({
-  JwtManager: vi.fn(() => ({
+  JwtManager: vi.fn().mockImplementation(() => ({
     getUserId: vi.fn(() => 1),
+    getToken: vi.fn(() => 'mock-token'),
   })),
 }));
 // -----------------------------------------------------------------------------
@@ -62,6 +67,7 @@ import { useReviews } from '@hooks/useReviews';
 import { useUsers } from '@hooks/useUsers';
 import { useReaders } from '@hooks/useReaders';
 import { useVenues } from '@hooks/useOrg';
+import { useCoaches } from '@hooks/useCoaches';
 
 const mockReviews = [
   { review_id: 1, coordinator_id: 1, coach_id: 1, reader_id: 1, date: '2024-01-01 10:00:00', venue_id: 1, status: 'scheduled', notes: null, created_at: '2024-01-01', reader_name: 'John Doe', first_name: 'Coach', last_name: 'One' },
@@ -80,6 +86,12 @@ const mockReaders = [
 const mockVenues = [
   { venue_id: 1, name: 'Main Library', affiliate_id: 1, address: '123 Main St', contact_name: 'John Doe', contact_email: 'john@library.com', contact_telephone: '555-0123', notes: 'Main venue', created_at: '2024-01-01', disabled: 0, affiliate_name: 'Main Affiliate' },
 ];
+
+const mockCoaches = [
+  { coach_id: 1, first_name: 'Coach', last_name: 'One', use_email: 1 },
+  { coach_id: 2, first_name: 'Coach', last_name: 'Two', use_email: 0 },
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+] as any;
 // -----------------------------------------------------------------------------
 
 describe('ReviewsCalendar', () => {
@@ -112,6 +124,12 @@ describe('ReviewsCalendar', () => {
       isLoading: false,
       mutate: vi.fn(),
     });
+    vi.mocked(useCoaches).mockReturnValue({
+      data: mockCoaches,
+      error: undefined,
+      isLoading: false,
+      mutate: vi.fn(),
+    });
 
     render(<ReviewsCalendar />);
     expect(screen.getByTestId('loading')).toBeInTheDocument();
@@ -138,6 +156,12 @@ describe('ReviewsCalendar', () => {
     });
     vi.mocked(useVenues).mockReturnValue({
       data: mockVenues,
+      error: undefined,
+      isLoading: false,
+      mutate: vi.fn(),
+    });
+    vi.mocked(useCoaches).mockReturnValue({
+      data: mockCoaches,
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),
@@ -173,6 +197,12 @@ describe('ReviewsCalendar', () => {
       isLoading: false,
       mutate: vi.fn(),
     });
+    vi.mocked(useCoaches).mockReturnValue({
+      data: mockCoaches,
+      error: undefined,
+      isLoading: false,
+      mutate: vi.fn(),
+    });
 
     render(<ReviewsCalendar />);
     expect(screen.getByTestId('events-count')).toHaveTextContent('1'); // Default filter shows only scheduled
@@ -199,6 +229,12 @@ describe('ReviewsCalendar', () => {
     });
     vi.mocked(useVenues).mockReturnValue({
       data: mockVenues,
+      error: undefined,
+      isLoading: false,
+      mutate: vi.fn(),
+    });
+    vi.mocked(useCoaches).mockReturnValue({
+      data: mockCoaches,
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),
@@ -236,6 +272,12 @@ describe('ReviewsCalendar', () => {
     });
     vi.mocked(useVenues).mockReturnValue({
       data: mockVenues,
+      error: undefined,
+      isLoading: false,
+      mutate: vi.fn(),
+    });
+    vi.mocked(useCoaches).mockReturnValue({
+      data: mockCoaches,
       error: undefined,
       isLoading: false,
       mutate: vi.fn(),

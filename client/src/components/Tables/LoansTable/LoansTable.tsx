@@ -21,9 +21,6 @@ export default function LoansTable(): React.JSX.Element {
     return <Loading />;
   }
   
-  console.log('LoansData:', loansData);
-  console.log('ReadersData:', readersData);
-
   return (
     <div className='p-4'>
       <LTable 

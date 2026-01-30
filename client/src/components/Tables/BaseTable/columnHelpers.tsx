@@ -54,7 +54,7 @@ export function createStatusColumn<T>(
 export function createDisabledColumn<T>(accessor: keyof T): ColumnDef<T> {
   return {
     accessorKey: accessor as string,
-    header: createSortableHeader('Disabled'),
+    header: createSortableHeader('Unavailable'),
     cell: ({ getValue }) => {
       const isDisabled = getValue();
       const text = isDisabled ? 'yes' : 'no';

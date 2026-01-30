@@ -118,10 +118,10 @@ class DbLogin extends DbBase {
         $email = $params['email'];
         try {
             $this->logger->info('create password reset token attempt: ' . $email);
-            # Ensure email address exists
-            $email_exists = $this->run_query_param(
-                'SELECT user_id FROM users WHERE email=:param', $email);
-            if (!$email_exists) {
+            # Ensure email address exists and is not a Coach
+            $account = $this->run_query_param(
+                'SELECT user_id, role FROM users WHERE email=:param', $email);
+            if (!$account || ($account['role'] === 'coach' )) {
                 # Don't return 404 to avoid email address discovery
                 return new Status(true, 200, ['message' => '']);
             }
@@ -150,11 +150,17 @@ class DbLogin extends DbBase {
         $sql = 'INSERT INTO password_reset (email, token, expiry) 
                 VALUES (:email, :token, DATE_ADD(NOW(), INTERVAL :expiry HOUR))';
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute([
+        if (!$stmt) {
+            throw new Exception('Failed to prepare password reset token query');
+        }
+        $result = $stmt->execute([
             ':email' => $email,
             ':token' => $token_hash,
             ':expiry' => $expiry,
         ]);
+        if (!$result) {
+            throw new Exception('Failed to insert password reset token');
+        }
         return $token;
     } 
     # --------------------------------------------------------------------------
@@ -246,9 +252,12 @@ class DbLogin extends DbBase {
                     WHERE email = :email';
 
             $stmt = $this->conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception('Failed to prepare login query');
+            }
             $stmt->execute([':email' => $email]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
+            
             if ($row) {
                 if (password_verify($password, $row['password'])) {
                     if ((int)$row['disabled'] === 1) {
@@ -262,7 +271,7 @@ class DbLogin extends DbBase {
                             } else {
                                 $mfaService = new MFAService();
                                 if ($mfaService->verify_code($row['mfa_secret'], $mfa_code)) {
-                                    $token = $this->create_iwt($row['user_id'], $email, $row['role']);
+                                    $token = $this->create_jwt($row['user_id'], $email, $row['role']);
                                     $status = new Status(true, 200, ['token' => $token]);
                                     $this->add_audit(AuditType::LOGIN, $email, $row['user_id']);
                                 } else {
@@ -270,7 +279,7 @@ class DbLogin extends DbBase {
                                 }
                             }
                         } else {
-                            $token = $this->create_iwt($row['user_id'], $email, $row['role']);
+                            $token = $this->create_jwt($row['user_id'], $email, $row['role']);
                             $status = new Status(true, 200, ['token' => $token]);
                             $status->data = $token;
                             $this->add_audit(AuditType::LOGIN, $email, $row['user_id']);
@@ -363,6 +372,11 @@ class DbLogin extends DbBase {
             if (!$status->success) {
                 return $status;
             }
+            
+            # Validate password strength
+            if (!is_valid_password($params['password'])) {
+                return new Status(false, 400, ['message' => 'Password does not meet complexity requirements']);
+            }
             $status = $this->validate_reset_token($params['token'], false);
             if ($status->success) {
                 $email = $status->data;
@@ -434,10 +448,21 @@ class DbLogin extends DbBase {
             # Select all unexpired records
             $sql = 'SELECT email, token, expiry 
                     FROM password_reset 
-                    WHERE expiry > NOW()';
+                    WHERE expiry > NOW() 
+                    ORDER BY expiry DESC 
+                    LIMIT 100';
             $stmt = $this->conn->prepare($sql);
-            $stmt->execute();
+            if (!$stmt) {
+                throw new Exception('Failed to prepare password reset validation query');
+            }
+            $result = $stmt->execute();
+            if (!$result) {
+                throw new Exception('Failed to execute password reset validation query');
+            }
             $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if ($records === false) {
+                throw new Exception('Failed to fetch password reset records');
+            }
             $status = new Status(false, 401, ['message' => 'Token is invalid']);
             if ($records) {
                 foreach ($records as $record) {

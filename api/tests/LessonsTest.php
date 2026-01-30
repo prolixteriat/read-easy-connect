@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------
 
 require_once __DIR__ . '/tst/TstDbLessons.php';
-require_once __DIR__ . '/utils/creds.php';
+require_once __DIR__ . '/tst/TstDbBase.php';
 
 # ------------------------------------------------------------------------------
 
@@ -18,19 +18,19 @@ class LessonsTest extends TestCase {
 
     protected Slim\App $app;
     protected TstDbLessons $db;
+    protected TstDbBase $base;
     protected string $jwt_token;
     protected ServerRequestFactory $request_factory;
     protected StreamFactory $stream_factory;
-    protected array $tokens;
 
     # --------------------------------------------------------------------------
 
     protected function setUp(): void {
         
-        $this->tokens = TestTokens::get();
+        $this->base = new TstDbBase();
         $this->db = new TstDbLessons();
         $this->app = AppFactory::create();
-        $this->jwt_token = $this->tokens['manager']; 
+        $this->jwt_token = $this->base->test_manager_jwt; 
         $this->request_factory = new ServerRequestFactory();
         $this->stream_factory = new StreamFactory();
 
@@ -38,15 +38,20 @@ class LessonsTest extends TestCase {
     }
     # --------------------------------------------------------------------------
 
+    protected function tearDown(): void {
+        $this->base->cleanup();
+    }
+    # --------------------------------------------------------------------------
+
     public function test_add_lesson(): void {
 
-        $payload = ['coach_id' => '6', 
-                    'reader_id' => '1',
+        $payload = ['coach_id' => $this->base->test_coach_id, 
+                    'reader_id' => $this->base->test_reader_id,
                     'date' => '2024-01-15',
-                    'venue_id' => 1];
+                    'venue_id' => $this->base->test_venue_id];
         $lesson_id = null;
         try {
-            $this->jwt_token = $this->tokens['coach'];
+            $this->jwt_token = $this->base->test_coach_jwt;
             $request = $this->create_request('POST', '/lessons/add-lesson', 
                                             $payload);
             $response = $this->app->handle($request);
@@ -66,14 +71,14 @@ class LessonsTest extends TestCase {
 
         $lesson_id = null;
         try {
-            $this->jwt_token = $this->tokens['coordinator'];
+            $this->jwt_token = $this->base->test_coordinator_jwt;
             
             # Add new test lesson
             $add_payload = [
-                'coach_id' => TEST_COACH_ID,
-                'reader_id' => '1',
+                'coach_id' => $this->base->test_coach_id,
+                'reader_id' => $this->base->test_reader_id,
                 'date' => '2024-01-15',
-                'venue_id' => 1
+                'venue_id' => $this->base->test_venue_id
             ];
             $add_request = $this->create_request('POST', '/lessons/add-lesson', 
                                                 $add_payload);
@@ -84,14 +89,14 @@ class LessonsTest extends TestCase {
             
             # Retrieve and check initial venue_id
             $get_request = $this->create_request('GET', 
-                        '/lessons/get-lessons-coach?coach_id=' . TEST_COACH_ID);
+                        '/lessons/get-lessons-coach?coach_id=' . $this->base->test_coach_id);
             $get_response = $this->app->handle($get_request);
             $this->assertEquals(200, $get_response->getStatusCode());
             $lessons = json_decode((string) $get_response->getBody(), true);
             $found_lesson = array_filter($lessons, 
                                     fn($l) => $l['lesson_id'] == $lesson_id);
             $this->assertNotEmpty($found_lesson);
-            $this->assertEquals(1, 
+            $this->assertEquals($this->base->test_venue_id, 
                                     array_values($found_lesson)[0]['venue_id']);
             
             # Update lesson venue_id
@@ -106,7 +111,7 @@ class LessonsTest extends TestCase {
             
             # Retrieve and check updated venue_id
             $get_request2 = $this->create_request('GET', 
-                        '/lessons/get-lessons-coach?coach_id='. TEST_COACH_ID);
+                        '/lessons/get-lessons-coach?coach_id='. $this->base->test_coach_id);
             $get_response2 = $this->app->handle($get_request2);
             $this->assertEquals(200, $get_response2->getStatusCode());
             $lessons2 = json_decode((string) $get_response2->getBody(), true);
@@ -126,9 +131,9 @@ class LessonsTest extends TestCase {
 
     public function test_get_lessons_coach(): void {
 
-        $this->jwt_token = $this->tokens['coach'];
+        $this->jwt_token = $this->base->test_coach_jwt;
         $request = $this->create_request('GET', 
-                        '/lessons/get-lessons-coach?coach_id=' . TEST_COACH_ID);
+                        '/lessons/get-lessons-coach?coach_id=' . $this->base->test_coach_id);
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());
         $body = (string) $response->getBody();
@@ -138,9 +143,9 @@ class LessonsTest extends TestCase {
 
     public function test_get_lessons_reader(): void {
 
-        $this->jwt_token = $this->tokens['coach'];
+        $this->jwt_token = $this->base->test_coach_jwt;
         $request = $this->create_request('GET', 
-                                    '/lessons/get-lessons-reader?reader_id=1');
+                                    '/lessons/get-lessons-reader?reader_id=' . $this->base->test_reader_id);
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());
         $body = (string) $response->getBody();
@@ -150,7 +155,7 @@ class LessonsTest extends TestCase {
 
     public function test_get_lessons(): void {
 
-        $this->jwt_token = $this->tokens['manager'];
+        $this->jwt_token = $this->base->test_manager_jwt;
         $request = $this->create_request('GET', '/lessons/get-lessons');
         $response = $this->app->handle($request);
         $this->assertEquals(200, $response->getStatusCode());

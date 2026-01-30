@@ -3,7 +3,7 @@ import { Copy } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
 
-type ReadersDetail = {
+type ReaderDetail = {
   area_id: number | null;
   area_name: string | null;
   coordinator_id: number | null;
@@ -22,11 +22,11 @@ type ReadersDetail = {
 
 // -----------------------------------------------------------------------------
 
-interface ReadersDetailTableProps {
-  filteredData?: ReadersDetail[];
+interface ReaderDetailTableProps {
+  filteredData?: ReaderDetail[];
 }
 
-export default function ReadersDetailTable({ filteredData }: ReadersDetailTableProps): React.JSX.Element {
+export default function ReaderDetailTable({ filteredData }: ReaderDetailTableProps): React.JSX.Element {
   const displayData = useMemo(() => filteredData || [], [filteredData]);
   const [showCopied, setShowCopied] = useState(false);
 
@@ -80,7 +80,7 @@ export default function ReadersDetailTable({ filteredData }: ReadersDetailTableP
     }
     acc[areaKey][coordKey].push(reader);
     return acc;
-  }, {} as Record<string, Record<string, ReadersDetail[]>>);
+  }, {} as Record<string, Record<string, ReaderDetail[]>>);
 
   // Sort areas to put 'Unassigned' at the end
   const sortedAreas = Object.keys(groupedData).sort((a, b) => {

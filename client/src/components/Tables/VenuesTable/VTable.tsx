@@ -1,10 +1,13 @@
 import { useState, useMemo, useCallback } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
+import { X } from 'lucide-react';
+import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 
 import { editVenue, addVenue } from '@lib/api/apiOrg';
 import { asString} from '@lib/helper';
+import { type TRole } from '@lib/types';
 import { Button, ErrorDialog, Loading } from '@components/Common';
-import { BaseTable, TableModal, useTableState, createSortableHeader, createDisabledColumn } from '../BaseTable';
+import { BaseTable, useTableState, createSortableHeader, createDisabledColumn } from '../BaseTable';
 
 // -----------------------------------------------------------------------------
 
@@ -22,6 +25,68 @@ type Venue = {
   affiliate_name: string;
 };
 
+// Custom TableModal that conditionally shows Save button
+function CustomTableModal<T>({
+  isOpen,
+  onClose,
+  title,
+  data,
+  onSave,
+  isSaving,
+  showSaveButton,
+  children,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  data: T | null;
+  onSave: () => void;
+  isSaving: boolean;
+  showSaveButton: boolean;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <Dialog open={isOpen} onClose={() => {}} className='relative z-50'>
+      <div className='fixed inset-0 bg-black/30' aria-hidden='true' />
+      <div className='fixed inset-0 flex items-center justify-center p-4'>
+        <DialogPanel className='w-full max-w-2xl rounded-xl bg-white p-6 shadow-lg'>
+          <div className='flex justify-between items-start mb-4'>
+            <div>
+              <DialogTitle className='text-lg font-semibold'>{title}</DialogTitle>
+              {data && 'id' in (data as Record<string, unknown>) && (
+                <p className='text-sm text-blue-600 font-bold'>ID: {String((data as Record<string, unknown>).id)}</p>
+              )}
+            </div>
+            <button onClick={onClose}>
+              <X className='h-5 w-5 text-gray-500' />
+            </button>
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (showSaveButton) onSave();
+            }}
+            className='space-y-3 max-h-96 overflow-y-auto pr-2'
+          >
+            {children}
+            <div className='flex justify-end gap-2 mt-4'>
+              <Button variant='secondary' type='button' onClick={onClose}>
+                Cancel
+              </Button>
+              {showSaveButton && (
+                <Button type='submit' disabled={isSaving}>
+                  {isSaving ? 'Saving...' : 'Save'}
+                </Button>
+              )}
+            </div>
+          </form>
+        </DialogPanel>
+      </div>
+    </Dialog>
+  );
+}
+
 // -----------------------------------------------------------------------------
 
 interface VTableProps {
@@ -29,9 +94,10 @@ interface VTableProps {
   onSave: (updatedRow: Venue) => void;
   showDisabled?: boolean;
   setShowDisabled?: (show: boolean) => void;
+  userRole: TRole | null;
 }
 
-export function VTable({ data, onSave, showDisabled, setShowDisabled }: VTableProps): React.JSX.Element {
+export function VTable({ data, onSave, showDisabled, setShowDisabled, userRole }: VTableProps): React.JSX.Element {
   const tableState = useTableState({ id: 'name', desc: false });
   const [selectedRow, setSelectedRow] = useState<Venue | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -47,7 +113,7 @@ export function VTable({ data, onSave, showDisabled, setShowDisabled }: VTablePr
   const copyToClipboard = useCallback(async () => {
     if (!data || data.length === 0) return;
     
-    const headers = ['Name', 'Address', 'Disabled'];
+    const headers = ['Name', 'Address', 'Unavailable'];
     const rows = data.map(venue => [
       venue.name,
       venue.address || '',
@@ -173,7 +239,7 @@ export function VTable({ data, onSave, showDisabled, setShowDisabled }: VTablePr
         <span className={`px-2 py-1 text-xs rounded-full ${
           venue.disabled === 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
         }`}>
-          {venue.disabled === 0 ? 'Enabled' : 'Disabled'}
+          {venue.disabled === 0 ? 'Available' : 'Unavailable'}
         </span>
       </div>
       <p className='text-sm text-gray-600 mb-1'>{venue.address || 'No address'}</p>
@@ -212,23 +278,26 @@ export function VTable({ data, onSave, showDisabled, setShowDisabled }: VTablePr
                 onChange={(e) => setShowDisabled(e.target.checked)}
                 className='rounded'
               />
-              <span>Show disabled</span>
+              <span>Show unavailable</span>
             </label>
           )}
         </div>
-        <Button variant='primary' onClick={() => setIsAddOpen(true)} className='sm:whitespace-nowrap'>
-          Add Venue
-        </Button>
+        {userRole !== 'viewer' && (
+          <Button variant='primary' onClick={() => setIsAddOpen(true)} className='sm:whitespace-nowrap'>
+            Add Venue
+          </Button>
+        )}
       </div>
     </BaseTable>
 
-      <TableModal
+      <CustomTableModal
         isOpen={tableState.isOpen}
         onClose={() => tableState.setIsOpen(false)}
         title='Edit Venue'
         data={selectedRow}
         onSave={handleSave}
         isSaving={tableState.isSaving}
+        showSaveButton={userRole !== 'viewer'}
       >
         {selectedRow && (
           <>
@@ -279,7 +348,7 @@ export function VTable({ data, onSave, showDisabled, setShowDisabled }: VTablePr
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Disabled</label>
+                <label className='block text-sm font-medium text-gray-700'>Unavailable</label>
                 <select
                   className='w-full rounded-md border p-2'
                   value={selectedRow.disabled}
@@ -301,17 +370,18 @@ export function VTable({ data, onSave, showDisabled, setShowDisabled }: VTablePr
             </div>
           </>
         )}
-      </TableModal>
+      </CustomTableModal>
 
 
       
-      <TableModal
+      <CustomTableModal
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         title='Add Venue'
         data={null}
         onSave={handleAddVenue}
         isSaving={tableState.isSaving}
+        showSaveButton={userRole !== 'viewer'}
       >
         <div>
           <label className='block text-sm font-medium text-gray-700'>Name *</label>
@@ -367,7 +437,7 @@ export function VTable({ data, onSave, showDisabled, setShowDisabled }: VTablePr
             onChange={(e) => setNewVenue({ ...newVenue, notes: e.target.value })}
           />
         </div>
-      </TableModal>
+      </CustomTableModal>
 
       <ErrorDialog
         isOpen={tableState.showError}
