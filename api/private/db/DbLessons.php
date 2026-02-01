@@ -110,7 +110,6 @@ class DbLessons extends DbBase {
     # Optional : coach_id, reader_id, date, venue_id, status, attention, notes
 
     public function edit_lesson(Request $request): Status {
-        # TODO: Send email to coach if date or venue is changed. Include .ICS attachment
         $status = $this->validate_token($request, ['coach', 'coordinator', 'manager']);
         if (!$status->success) { 
             return $status; 

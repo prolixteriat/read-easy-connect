@@ -87,7 +87,14 @@ $app->post('/users/edit-user', function (Request $request, Response $response) {
 $app->get('/users/get-reset-form', function (Request $request, Response $response) {
     $db = new DbLogin();
     $status = $db->get_reset_form($request);
-    $response->getBody()->write($status->data);
+
+    if ($status->success === false) {
+        $json_data = json_decode($status->message, true);
+        $response->getBody()->write($json_data['message']);
+    } else {
+        $response->getBody()->write($status->data);
+    }
+
     return $response
         ->withHeader('Content-Type', 'text/html')
         ->withStatus($status->code);
@@ -140,7 +147,14 @@ $app->post('/users/logout', function (Request $request, Response $response) {
 $app->get('/users/password-reset', function (Request $request, Response $response) {
     $db = new DbLogin();
     $status = $db->password_reset($request);
-    $response->getBody()->write($status->data);
+    
+    if ($status->success === false) {
+        $json_data = json_decode($status->message, true);
+        $response->getBody()->write($json_data['message']);
+    } else {
+        $response->getBody()->write($status->data);
+    }
+    
     return $response
         ->withHeader('Content-Type', 'text/html')
         ->withStatus($status->code);

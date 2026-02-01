@@ -190,13 +190,13 @@ class DbLogin extends DbBase {
 
     public function get_reset_form(Request $request): Status {
 
-        $required_params = ['token'];
+        $required_params = ['token', 'csp_nonce'];
         $params = $this->sanitise_array($request->getQueryParams());
         $status = $this->validate_params($params, $required_params );
         if (!$status->success) {
             return $status;
         }
-        $html = get_password_reset_form($params['token']);
+        $html = get_password_reset_form($params['token'], $params['csp_nonce']);
         $status = new Status(true, 200, ['message' => 'Reset form']);
         $status->data = $html;
         return $status;
@@ -340,8 +340,10 @@ class DbLogin extends DbBase {
     # Optional : n/a
 
     public function password_reset(Request $request): Status {
-        $required_params = ['token'];
-        $params = $this->sanitise_array($request->getQueryParams());
+        $required_params = ['token', 'csp_nonce'];
+        $raw_params = $request->getQueryParams();
+        $raw_params['csp_nonce'] = $request->getAttribute('csp_nonce');
+        $params = $this->sanitise_array($raw_params);        
         $status = $this->validate_params($params, $required_params);
         if (!$status->success) {
             return $status;
@@ -355,7 +357,7 @@ class DbLogin extends DbBase {
             return $token_status;
         }
         
-        $html = get_password_reset_form($params['token']);
+        $html = get_password_reset_form($params['token'], $params['csp_nonce']);
         $status = new Status(true, 200, ['message' => 'Password reset form']);
         $status->data = $html;
         return $status;

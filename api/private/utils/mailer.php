@@ -78,11 +78,11 @@ class Mailer {
             $this->mail->clearAttachments();
             $this->mail->isHTML(true);
             # #### TODO: remove the calls to update_domain for production
-            $to = $this->update_domain($to);
+            # $to = $this->update_domain($to);
             $this->mail->addAddress($to);
             if ($cc) {
                 $this->mail->addCC($cc);
-                $cc = $this->update_domain($cc);
+                # $cc = $this->update_domain($cc);
             }
             $this->mail->Subject = $subject;
             $this->mail->Body = $this->wrap_html($body);
@@ -154,7 +154,7 @@ class Mailer {
         return $html;
     }
     # --------------------------------------------------------------------------
-    # TODO: Dev function to handle @example.com emails which cause sending of 
+    # Dev function to handle @example.com emails which cause sending of 
     # emails to fail.
     private function update_domain(?string $email = null): string
     {

@@ -26,6 +26,23 @@ use Slim\Exception\HttpNotFoundException;
 # ------------------------------------------------------------------------------
 
 $app = AppFactory::create();
+
+# Add CSP middleware for HTML responses
+$app->add(function ($request, $handler) {
+    # Add nonce for subsequent use by HTML-returning endpoints
+    $nonce = bin2hex(random_bytes(16));
+    $request = $request->withAttribute('csp_nonce', $nonce);
+    $response = $handler->handle($request);    
+    /*
+    # The CSP is now applied in HTML <head> to workaround Hostinger-blocking
+    if (str_contains($response->getHeaderLine('Content-Type'), 'text/html')) {
+        $csp = '...';
+        return $response->withHeader('Content-Security-Policy', $csp);
+    }
+    */
+    return $response;
+});
+
 $app->addBodyParsingMiddleware();
 $app->addRoutingMiddleware();
 $app->add(new BasePathMiddleware($app));
@@ -34,7 +51,6 @@ $customErrorHandler = new CustomErrorHandler(
     $app->getCallableResolver(),
     $app->getResponseFactory()
 );
-
 # TODO: Set first boolean to false in production code
 $errorMiddleware = $app->addErrorMiddleware(true, true, true);
 $errorMiddleware->setDefaultErrorHandler($customErrorHandler);

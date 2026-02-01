@@ -122,18 +122,21 @@ function get_logger(string $channel, Level $level=Level::Info,
 }
 # ------------------------------------------------------------------------------
 
-function get_password_reset_form(string $token): string {
+function get_password_reset_form(string $token, string $nonce): string {
     $url = API_URL . '/users/submit-reset';
     $icon_url = API_URL;
     $mfa_url = API_URL . '/users/complete-mfa-setup';
     $title = 'Password Reset';
+    $connect = API_URL;
+    $boot = 'https://cdn.jsdelivr.net'; 
+    
     $html = <<<EOD
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="icon" type="image/x-icon" href="{$icon_url}/favicon.ico">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' {$boot} 'nonce-{$nonce}'; style-src 'self' {$boot} 'unsafe-inline'; font-src {$boot}; img-src 'self' data:; connect-src 'self' {$connect} {$boot};">        <link rel="icon" type="image/x-icon" href="{$icon_url}/favicon.ico">
         <title>$title</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
@@ -208,8 +211,8 @@ function get_password_reset_form(string $token): string {
             </div>
         </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-        <script>	
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" nonce="$nonce"></script>
+        <script nonce="$nonce">	
         document.addEventListener('DOMContentLoaded', function () {
             const passwordToggle = document.querySelector('.js-password-toggle');
             const passwordInput = document.getElementById('passwordInput');
