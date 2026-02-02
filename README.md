@@ -5,7 +5,7 @@ This repository contains the components which make up the Read Easy Connect web 
 
 ## Structure
 - **api** - PHP API for the database.
-- **database** - MySQL script to create the database schema.
+- **database** - MariaDB script to create the database schema.
 - **client** - Front-end which consumes endpoints presented by the API. Consists of React components written in TypeScript using Vite and Tailwind CSS.
 
 ##	Installation
