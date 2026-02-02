@@ -17,18 +17,21 @@ if (ENVIRONMENT === DEV) {
     define('API_URL', '');
     define('HOME_URL', '');
     define('MFA_LABEL', '');
+    define('CREDS_PATH', '');
 
 } else if (ENVIRONMENT === PROD) {
     define('BASE_URL', '');
     define('API_URL', '');
     define('HOME_URL', '');
     define('MFA_LABEL', '');
+    define('CREDS_PATH', '');
     
 } else if (ENVIRONMENT === TEST) {
     define('BASE_URL', '');
     define('API_URL', '');
     define('HOME_URL', '');
     define('MFA_LABEL', '');
+    define('CREDS_PATH', '');
 
 } else {
     die('Invalid environment');
