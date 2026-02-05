@@ -1,12 +1,22 @@
 import React from 'react';
 
+import { feedbackUrl, helpUrls } from '@lib/config.ts';
+
 // -----------------------------------------------------------------------------
 
 export const ContactBlock = (): React.JSX.Element => (
   <>
     <h1 className='text-2xl pt-5 mb-5'>Contact Us</h1>
-    <p>For general support enquiries, please email&nbsp; 
-      <a href='mailto:hcdataprotection@readeasy.org.uk?subject=Read%20Easy%20Connect%20Query' className='underline'>hcdataprotection@readeasy.org.uk</a></p>
+    <p>Please use <a href={feedbackUrl} className='underline' target='_blank'>this form</a>&nbsp;
+      to record any comments, questions or bugs you find while using the Read Easy Connect app.</p>
+    <p>A range of role-specific help resources can be found at the links below:</p>
+    <ul className='list-disc list-inside ml-4 space-y-1'>
+      {Object.entries(helpUrls).map(([key, url]) => (
+        <li key={key}>
+          <a href={url} className='underline' target='_blank' rel='noopener noreferrer'>{key}</a>
+        </li>
+      ))}
+    </ul>
   </>
 );
 // -----------------------------------------------------------------------------

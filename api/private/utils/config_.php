@@ -40,6 +40,8 @@ if (ENVIRONMENT === DEV) {
 define('LOGBASE', '../logs');
 define('LOGPATH', LOGBASE . '/api.log');
 
+define('LOGIN_VIDEO_URL', '');
+
 # ------------------------------------------------------------------------------
 
 /*

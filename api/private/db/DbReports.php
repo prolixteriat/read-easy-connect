@@ -217,48 +217,68 @@ class DbReports extends DbBase {
             ];
             
             # Count managers
-            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN managers m ON u.user_id = m.manager_id WHERE m.affiliate_id = ? AND u.status = "active" AND u.disabled = FALSE');
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u 
+                JOIN managers m ON u.user_id = m.manager_id 
+                WHERE m.affiliate_id = ? AND u.role = "manager" AND u.status = "active" 
+                AND u.disabled = FALSE');
             $stmt->execute([$user_affiliate]);
             $dashboard['manager']['active'] = $stmt->fetchColumn();
             
-            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN managers m ON u.user_id = m.manager_id WHERE m.affiliate_id = ? AND u.status = "onhold" AND u.disabled = FALSE');
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u 
+                JOIN managers m ON u.user_id = m.manager_id 
+                WHERE m.affiliate_id = ? AND u.role = "manager" AND u.status = "onhold" 
+                AND u.disabled = FALSE');
             $stmt->execute([$user_affiliate]);
             $dashboard['manager']['onhold'] = $stmt->fetchColumn();
             
             # Count viewers
-            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN viewers v ON u.user_id = v.viewer_id WHERE v.affiliate_id = ? AND u.status = "active" AND u.disabled = FALSE');
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u 
+                JOIN viewers v ON u.user_id = v.viewer_id WHERE v.affiliate_id = ? 
+                AND u.role = "viewer" AND u.status = "active" AND u.disabled = FALSE');
             $stmt->execute([$user_affiliate]);
             $dashboard['viewer']['active'] = $stmt->fetchColumn();
             
-            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN viewers v ON u.user_id = v.viewer_id WHERE v.affiliate_id = ? AND u.status = "onhold" AND u.disabled = FALSE');
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u 
+                JOIN viewers v ON u.user_id = v.viewer_id WHERE v.affiliate_id = ? 
+                AND u.role = "viewer" AND u.status = "onhold" AND u.disabled = FALSE');
             $stmt->execute([$user_affiliate]);
             $dashboard['viewer']['onhold'] = $stmt->fetchColumn();
             
             # Count coordinators
-            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN coordinators c ON u.user_id = c.coordinator_id WHERE c.affiliate_id = ? AND u.status = "active" AND u.disabled = FALSE');
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u 
+                JOIN coordinators c ON u.user_id = c.coordinator_id WHERE c.affiliate_id = ? 
+                AND u.role = "coordinator" AND u.status = "active" AND u.disabled = FALSE');
             $stmt->execute([$user_affiliate]);
             $dashboard['coordinator']['active'] = $stmt->fetchColumn();
             
-            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN coordinators c ON u.user_id = c.coordinator_id WHERE c.affiliate_id = ? AND u.status = "onhold" AND u.disabled = FALSE');
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u 
+                JOIN coordinators c ON u.user_id = c.coordinator_id WHERE c.affiliate_id = ? 
+                AND u.role = "coordinator" AND u.status = "onhold" AND u.disabled = FALSE');
             $stmt->execute([$user_affiliate]);
             $dashboard['coordinator']['onhold'] = $stmt->fetchColumn();
             
             # Count coaches
-            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN coaches c ON u.user_id = c.coach_id WHERE c.affiliate_id = ? AND u.status = "active" AND u.disabled = FALSE');
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u 
+                JOIN coaches c ON u.user_id = c.coach_id WHERE c.affiliate_id = ? 
+                AND u.role = "coach" AND u.status = "active" AND u.disabled = FALSE');
             $stmt->execute([$user_affiliate]);
             $dashboard['coach']['active'] = $stmt->fetchColumn();
             
-            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u JOIN coaches c ON u.user_id = c.coach_id WHERE c.affiliate_id = ? AND u.status = "onhold" AND u.disabled = FALSE');
+            $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM users u 
+                JOIN coaches c ON u.user_id = c.coach_id WHERE c.affiliate_id = ? 
+                AND u.role = "coach" AND u.status = "onhold" AND u.disabled = FALSE');
             $stmt->execute([$user_affiliate]);
             $dashboard['coach']['onhold'] = $stmt->fetchColumn();
             
             # Count readers by level (excluding DO, G, C statuses)
             foreach (['TP1', 'TP2', 'TP3', 'TP4', 'TP5'] as $level) {
-                $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM readers WHERE affiliate_id = ? AND level = ? AND status = "S"');
+                $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM readers 
+                    WHERE affiliate_id = ? AND level = ? AND status = "S"');
                 $stmt->execute([$user_affiliate, $level]);
                 $dashboard["reader_$level"]['active'] = $stmt->fetchColumn();
                 
-                $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM readers WHERE affiliate_id = ? AND level = ? AND status IN ("NYS", "P")');
+                $stmt = $this->conn->prepare('SELECT COUNT(*) as count FROM readers 
+                    WHERE affiliate_id = ? AND level = ? AND status IN ("NYS", "P")');
                 $stmt->execute([$user_affiliate, $level]);
                 $dashboard["reader_$level"]['onhold'] = $stmt->fetchColumn();
             }

@@ -566,6 +566,7 @@ class DbUsers extends DbBase {
         $token = $db->make_token($email, $expiry); 
         $mailer = new Mailer();
         $connect_url = HOME_URL;
+        $video_url = LOGIN_VIDEO_URL;
         $reset_url = $mailer->get_reset_url($token);
             $body = "<p>{$salutation},</p>
                 <p>You have been invited to join the {$system} system.</p>
@@ -582,6 +583,9 @@ class DbUsers extends DbBase {
                 app, please select the <strong>Login</strong> option within 
                 <a href='{$connect_url}'>{$system}</a> then enter your email
                 address and password.</p>
+                <p>If you find that you need additional help, 
+                <a href='{$video_url}'>this video</a> demonstrates how to login 
+                for the first time.</p>
                 <p>Thank you for joining the {$system} system.</p>";
 
         $success = $mailer->send_email($email, $subject, $body);
