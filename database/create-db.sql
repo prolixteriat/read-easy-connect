@@ -8,6 +8,8 @@ DROP TABLE IF EXISTS `coordinators`;
 DROP TABLE IF EXISTS `lessons`;
 DROP TABLE IF EXISTS `loans`;
 DROP TABLE IF EXISTS `comments`;
+DROP TABLE IF EXISTS `coach_notes`;
+DROP TABLE IF EXISTS `reader_notes`;
 DROP TABLE IF EXISTS `reviews`;
 DROP TABLE IF EXISTS `login_attempts`;
 DROP TABLE IF EXISTS `managers`;
@@ -213,6 +215,37 @@ CREATE TABLE `comments` (
 
 	INDEX `idx_notes_reader_id` (`reader_id`)
 );
+
+CREATE TABLE `coach_notes` (
+	`note_id` INT AUTO_INCREMENT PRIMARY KEY,
+	`about_id` INT NOT NULL,
+	`by_id` INT NOT NULL,
+	`note` VARCHAR(1024) NOT NULL,
+	`note_at` DATETIME NOT NULL,
+	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+	FOREIGN KEY (`about_id`) REFERENCES `users`(`user_id`),
+	FOREIGN KEY (`by_id`) REFERENCES `users`(`user_id`),
+
+	INDEX `idx_coach_notes_about_id` (`about_id`),
+	INDEX `idx_coach_notes_by_id` (`by_id`)
+);
+
+CREATE TABLE `reader_notes` (
+	`note_id` INT AUTO_INCREMENT PRIMARY KEY,
+	`about_id` INT NOT NULL,
+	`by_id` INT NOT NULL,
+	`note` VARCHAR(1024) NOT NULL,
+	`note_at` DATETIME NOT NULL,
+	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+	FOREIGN KEY (`about_id`) REFERENCES `readers`(`reader_id`),
+	FOREIGN KEY (`by_id`) REFERENCES `users`(`user_id`),
+
+	INDEX `idx_reader_notes_about_id` (`about_id`),
+	INDEX `idx_reader_notes_by_id` (`by_id`)
+);
+
 
 CREATE TABLE `lessons` (
 	`lesson_id` INT AUTO_INCREMENT PRIMARY KEY,

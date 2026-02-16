@@ -322,8 +322,11 @@ class DbReviews extends DbBase {
     }
     # --------------------------------------------------------------------------
     
-    private function build_email_body(string $type, array $data): string {
+    private function build_email_body(string $type, array $data): ?string {
         $date_obj = new DateTime($data['date']);
+        if ($date_obj < new DateTime()) {
+            return null;
+        }
         $format_date = $date_obj->format('d-M-Y \a\t H:i');
         
         $messages = [
@@ -513,6 +516,9 @@ class DbReviews extends DbBase {
         $this->increment_ics_sequence($review_id);
         $subject = 'Reader Review Cancelled';
         $body = $this->build_email_body('cancelled', $data);
+        if ($body === null) {
+            return;
+        }
         
         $mailer = new Mailer();
         $coach_email = $this->ok_email_coach($data['coach_id']) ? $data['coach_email'] : null;
@@ -535,6 +541,9 @@ class DbReviews extends DbBase {
         
         $subject = 'Reader Review Invitation';
         $body = $this->build_email_body('invitation', $data);
+        if ($body === null) {
+            return;
+        }
         $ics_content = $this->create_ics_invitation($review_id, $data['reader_name'], 
                     $data['coach_name'], $data['coordinator_name'], 
                     $data['venue_name'], $data['venue_address'], $date, 
@@ -557,15 +566,23 @@ class DbReviews extends DbBase {
             throw new Exception("Failed to get review data for review ID: {$review_id}");
         }
         
-        $new_sequence = $this->increment_ics_sequence($review_id);
-        $subject = 'Reader Review Update';
         $body = $this->build_email_body('update', $data);
-        $ics_content = $this->create_ics_update($data['ics_uid'], $new_sequence, 
-                    $data['reader_name'], $data['coach_name'], $data['coordinator_name'], 
-                    $data['venue_name'], $data['venue_address'], $data['date'], 
-                    $data['coordinator_email'], $data['coach_email']);
+        if ($body === null) {
+            return;
+        }
+        $new_sequence = $this->increment_ics_sequence($review_id);
+        $ics_content = $data['ics_uid'] === null ?
+                        $this->create_ics_invitation($review_id, $data['reader_name'], 
+                            $data['coach_name'], $data['coordinator_name'], 
+                            $data['venue_name'], $data['venue_address'], $data['date'], 
+                            $data['coordinator_email'], $data['coach_email']) :
+                        $this->create_ics_update($data['ics_uid'], $new_sequence, 
+                            $data['reader_name'], $data['coach_name'], $data['coordinator_name'], 
+                            $data['venue_name'], $data['venue_address'], $data['date'], 
+                            $data['coordinator_email'], $data['coach_email']);
         
         $mailer = new Mailer();
+        $subject = 'Reader Review Update';
         $coach_email = $this->ok_email_coach($data['coach_id']) ? $data['coach_email'] : null;
         $mailer->send_email_with_attachment($data['coordinator_email'], $subject, $body, 
                     $ics_content, 'review_update.ics', $coach_email);
