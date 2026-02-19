@@ -1,14 +1,19 @@
 import { useState, useCallback } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
+import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
+import { X } from 'lucide-react';
+import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 
 import { type TReaderSchema, type TReadersSchema } from '@hooks/useReaders';
 import { useAreas } from '@hooks/useOrg';
 import { useCoaches } from '@hooks/useCoaches';
+import { useReaderNotes } from '@hooks/useNotes';
 
 import { editReader, addReader } from '@lib/api/apiReaders';
 import { asString} from '@lib/helper';
 
 import { Button, ConfirmDialog, ErrorDialog, Loading, HoverHelp, MessageDialog } from '@components/Common';
+import { NotesDisplay } from '@components/Common/NotesDisplay';
 import { BaseTable, TableModal, useTableState, createSortableHeader, 
         createStatusColumn } from '../BaseTable';
 
@@ -46,6 +51,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
   
   const { data: areasData } = useAreas();
   const { data: coachesData } = useCoaches();
+  const { data: notesData, error: notesError, isLoading: notesLoading, mutate: notesMutate } = useReaderNotes(selectedRow?.reader_id);
   const areas = areasData?.filter(area => area.disabled === 0) || [];
   const availableCoaches = coachesData?.filter(coach => 
     coach.user_status !== 'leaver' && 
@@ -284,7 +290,10 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
   };
 
   const renderMobileCard = (reader: Reader) => (
-    <div className='bg-white border rounded-lg p-4 shadow-sm cursor-pointer hover:shadow-md'>
+    <div 
+      className='bg-white border rounded-lg p-4 shadow-sm cursor-pointer hover:shadow-md'
+      onClick={() => handleRowClick(reader)}
+    >
       <div className='flex justify-between items-start mb-2'>
         <h3 className='font-semibold text-gray-900'>
           {reader.name}
@@ -347,17 +356,54 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
         </div>
       </BaseTable>
 
-      <TableModal
-        isOpen={tableState.isOpen}
-        onClose={handleCancel}
-        title='Edit Reader'
-        data={selectedRow}
-        onSave={handleSave}
-        isSaving={tableState.isSaving}
-      >
-        {selectedRow && (
-          <>
-                <div className='grid grid-cols-2 gap-3'>
+      {/* Edit Modal */}
+      <Dialog open={tableState.isOpen} onClose={() => {}} className='relative z-50'>
+        <div className='fixed inset-0 bg-black/30' aria-hidden='true' />
+        <div className='fixed inset-0 flex items-center justify-center p-4'>
+          <DialogPanel className='w-full max-w-2xl rounded-xl bg-white p-6 shadow-lg'>
+            <div className='flex justify-between items-start mb-4'>
+              <div>
+                <DialogTitle className='text-lg font-semibold'>Edit Reader</DialogTitle>
+                <p className='text-sm text-blue-600 font-bold'>ID: {selectedRow?.reader_id} • {selectedRow?.name}</p>
+              </div>
+              <button onClick={() => tableState.setIsOpen(false)}>
+                <X className='h-5 w-5 text-gray-500' />
+              </button>
+            </div>
+
+            {selectedRow && (
+              <TabGroup>
+                <TabList className="flex space-x-1 rounded-xl bg-blue-900/20 p-1 mb-4">
+                  <Tab className={({ selected }) =>
+                    `w-full rounded-lg py-2.5 text-sm font-medium leading-5 text-blue-700 ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2 ${
+                      selected
+                        ? 'bg-white shadow'
+                        : 'text-blue-100 hover:bg-white/[0.12] hover:text-white'
+                    }`
+                  }>
+                    Info
+                  </Tab>
+                  <Tab className={({ selected }) =>
+                    `w-full rounded-lg py-2.5 text-sm font-medium leading-5 text-blue-700 ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2 ${
+                      selected
+                        ? 'bg-white shadow'
+                        : 'text-blue-100 hover:bg-white/[0.12] hover:text-white'
+                    }`
+                  }>
+                    Notes
+                  </Tab>
+                </TabList>
+                <TabPanels>
+                  <TabPanel>
+                    <>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSave();
+                }}
+                className='space-y-3 max-h-96 overflow-y-auto pr-2'
+              >
+                <div className='grid grid-cols-2 gap-3 mb-4'>
                   <div>
                     <label className='block text-sm font-medium text-gray-700'>Reader ID</label>
                     <input
@@ -382,7 +428,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                   </div>
                 </div>
                 
-                <div className='grid grid-cols-2 gap-3'>
+                <div className='grid grid-cols-2 gap-3 mb-4'>
                   <div>
                     <label className='block text-sm font-medium text-gray-700'>Status</label>
                     <select
@@ -415,7 +461,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                   </div>
                 </div>
 
-                <div className='grid grid-cols-2 gap-3'>
+                <div className='grid grid-cols-2 gap-3 mb-4'>
                   <div>
                     <label className='block text-sm font-medium text-gray-700'>
                       Coach
@@ -450,7 +496,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                   </div>
                 </div>
 
-                <div>
+                <div className='mb-4'>
                   <label className='block text-sm font-medium text-gray-700'>Referrer Organisation</label>
                   <input
                     className='w-full rounded-md border p-2'
@@ -459,7 +505,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                   />
                 </div>
 
-                <div className='grid grid-cols-2 gap-3'>
+                <div className='grid grid-cols-2 gap-3 mb-4'>
                   <div>
                     <label className='block text-sm font-medium text-gray-700'>Enrolment</label>
                     <input
@@ -482,7 +528,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
 
 
 
-                <div className='grid grid-cols-2 gap-3'>
+                <div className='grid grid-cols-2 gap-3 mb-4'>
                   <div>
                     <label className='block text-sm font-medium text-gray-700'>TP1 Start</label>
                     <input
@@ -503,7 +549,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                   </div>
                 </div>
 
-                <div className='grid grid-cols-2 gap-3'>
+                <div className='grid grid-cols-2 gap-3 mb-4'>
                   <div>
                     <label className='block text-sm font-medium text-gray-700'>TP2 Start</label>
                     <input
@@ -524,7 +570,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                   </div>
                 </div>
 
-                <div className='grid grid-cols-2 gap-3'>
+                <div className='grid grid-cols-2 gap-3 mb-4'>
                   <div>
                     <label className='block text-sm font-medium text-gray-700'>TP3 Start</label>
                     <input
@@ -545,7 +591,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                   </div>
                 </div>
 
-                <div className='grid grid-cols-2 gap-3'>
+                <div className='grid grid-cols-2 gap-3 mb-4'>
                   <div>
                     <label className='block text-sm font-medium text-gray-700'>TP4 Start</label>
                     <input
@@ -566,7 +612,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                   </div>
                 </div>
 
-                <div className='grid grid-cols-2 gap-3'>
+                <div className='grid grid-cols-2 gap-3 mb-4'>
                   <div>
                     <label className='block text-sm font-medium text-gray-700'>TP5 Start</label>
                     <input
@@ -587,7 +633,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                   </div>
                 </div>
 
-                <div>
+                <div className='mb-4'>
                   <label className='block text-sm font-medium text-gray-700'>Graduation</label>
                   <input
                     type='date'
@@ -597,7 +643,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                   />
                 </div>
 
-                <div className='grid grid-cols-3 gap-3'>
+                <div className='grid grid-cols-3 gap-3 mb-4'>
                   <div>
                     <label className='block text-sm font-medium text-gray-700'>ONS4: pre-TP1</label>
                     <select
@@ -633,7 +679,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                   </div>
                 </div>
 
-                <div>
+                <div className='mb-4'>
                   <label className='block text-sm font-medium text-gray-700'>Availability</label>
                   <textarea
                     className='w-full rounded-md border p-2'
@@ -644,7 +690,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                 </div>
 
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Notes</label>
+                  <label className='block text-sm font-medium text-gray-700'>Comments</label>
                   <textarea
                     className='w-full rounded-md border p-2'
                     rows={3}
@@ -652,9 +698,44 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                     onChange={(e) => setSelectedRow({ ...selectedRow, notes: e.target.value || null })}
                   />
                 </div>
-          </>
-        )}
-      </TableModal>
+
+                <div className='flex justify-end gap-2 mt-4'>
+                  <Button variant='secondary' type='button' onClick={handleCancel}>
+                    Cancel
+                  </Button>
+                  <Button type='submit' disabled={tableState.isSaving}>
+                    {tableState.isSaving ? 'Saving...' : 'Save'}
+                  </Button>
+                </div>
+              </form>
+                    </>
+                  </TabPanel>
+                  <TabPanel>
+                    <div className='max-h-96 overflow-y-auto'>
+                      <NotesDisplay 
+                        data={notesData} 
+                        isLoading={notesLoading ?? false} 
+                        error={notesError}
+                        aboutId={selectedRow.reader_id}
+                        onRefresh={() => notesMutate?.()}
+                        noteType='reader'
+                      />
+                    </div>
+                    <div className='flex justify-end gap-2 mt-4'>
+                      <Button variant='secondary' type='button' onClick={handleCancel}>
+                        Cancel
+                      </Button>
+                      <Button type='button' onClick={handleSave} disabled={tableState.isSaving}>
+                        {tableState.isSaving ? 'Saving...' : 'Save'}
+                      </Button>
+                    </div>
+                  </TabPanel>
+                </TabPanels>
+              </TabGroup>
+            )}
+          </DialogPanel>
+        </div>
+      </Dialog>
 
       <ConfirmDialog
         isOpen={showConfirm}
@@ -755,7 +836,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Notes</label>
+                <label className='block text-sm font-medium text-gray-700'>Comments</label>
                 <textarea
                   className='w-full rounded-md border p-2'
                   rows={3}

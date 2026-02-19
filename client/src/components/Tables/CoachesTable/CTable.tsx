@@ -2,16 +2,19 @@ import { useState, useCallback } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { X } from 'lucide-react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
+import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
 
 import { type TCoachesSchema, type TCoachSchema, useCoach } from '@hooks/useCoaches';
 import { useUsers } from '@hooks/useUsers';
 import { useAreas } from '@hooks/useOrg';
+import { useCoachNotes } from '@hooks/useNotes';
 
 import { editCoach, addCoach } from '@lib/api/apiCoaches';
 import { asString} from '@lib/helper';
 import { type TCoachStatus, type TUserStatus, type TTrainingStatus } from '@lib/types';
 
 import { Button, ConfirmDialog, ErrorDialog, Loading, HoverHelp } from '@components/Common';
+import { NotesDisplay } from '@components/Common/NotesDisplay';
 import { BaseTable, useTableState, createSortableHeader, createStatusColumn } from '../BaseTable';
 
 // -----------------------------------------------------------------------------
@@ -81,6 +84,7 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
     nok_relationship: ''
   });
   const { data: coachData, mutate: mutateCoach } = useCoach(selectedRow?.coach_id || null);
+  const { data: notesData, error: notesError, isLoading: notesLoading, mutate: notesMutate } = useCoachNotes(selectedRow?.coach_id);
 
   const copyToClipboard = useCallback(async () => {
     if (!data || data.length === 0) return;
@@ -578,6 +582,30 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
             </div>
 
             {selectedRow && (
+              <TabGroup>
+                <TabList className="flex space-x-1 rounded-xl bg-blue-900/20 p-1 mb-4">
+                  <Tab className={({ selected }) =>
+                    `w-full rounded-lg py-2.5 text-sm font-medium leading-5 text-blue-700 ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2 ${
+                      selected
+                        ? 'bg-white shadow'
+                        : 'text-blue-100 hover:bg-white/[0.12] hover:text-white'
+                    }`
+                  }>
+                    Info
+                  </Tab>
+                  <Tab className={({ selected }) =>
+                    `w-full rounded-lg py-2.5 text-sm font-medium leading-5 text-blue-700 ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2 ${
+                      selected
+                        ? 'bg-white shadow'
+                        : 'text-blue-100 hover:bg-white/[0.12] hover:text-white'
+                    }`
+                  }>
+                    Notes
+                  </Tab>
+                </TabList>
+                <TabPanels>
+                  <TabPanel>
+                    <>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -819,7 +847,7 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                 </div>
 
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Notes</label>
+                  <label className='block text-sm font-medium text-gray-700'>Comments</label>
                   <textarea
                     className='w-full rounded-md border p-2'
                     rows={3}
@@ -842,6 +870,35 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                   </div>
                 </div>
               </form>
+                    </>
+                  </TabPanel>
+                  <TabPanel>
+                    <div className='max-h-96 overflow-y-auto'>
+                      <NotesDisplay 
+                        data={notesData} 
+                        isLoading={notesLoading ?? false} 
+                        error={notesError}
+                        aboutId={selectedRow.coach_id}
+                        onRefresh={() => notesMutate?.()}
+                        noteType='coach'
+                      />
+                    </div>
+                    <div className='flex justify-between items-center mt-4'>
+                      <Button variant='secondary' type='button' onClick={handlePersonalDataOpen}>
+                        Personal Data
+                      </Button>
+                      <div className='flex gap-2'>
+                        <Button variant='secondary' type='button' onClick={handleCancel}>
+                          Cancel
+                        </Button>
+                        <Button type='button' onClick={handleSave} disabled={tableState.isSaving}>
+                          {tableState.isSaving ? 'Saving...' : 'Save'}
+                        </Button>
+                      </div>
+                    </div>
+                  </TabPanel>
+                </TabPanels>
+              </TabGroup>
             )}
           </DialogPanel>
         </div>
@@ -1137,7 +1194,7 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Notes</label>
+                <label className='block text-sm font-medium text-gray-700'>Comments</label>
                 <textarea
                   className='w-full rounded-md border p-2'
                   rows={3}

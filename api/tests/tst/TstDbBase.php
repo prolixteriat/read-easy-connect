@@ -187,7 +187,9 @@ class TstDbBase extends DbBase {
                     'last_name' => 'Coordinator',
                     'email' => $this->test_coordinator_email,
                     'role' => 'coordinator',
-                    'affiliate_id' => $this->test_affiliate_id
+                    'affiliate_id' => $this->test_affiliate_id,
+                    'skip_email' => true
+
                 ],
                 ['Authorization' => 'Bearer ' . $this->test_manager_jwt]
             );
@@ -227,7 +229,8 @@ class TstDbBase extends DbBase {
                     'email' => $this->test_coach_email,
                     'role' => 'coach',
                     'affiliate_id' => $this->test_affiliate_id,
-                    'coordinator_id' => $this->test_coordinator_id
+                    'coordinator_id' => $this->test_coordinator_id,
+                    'skip_email' => true
                 ],
                 ['Authorization' => 'Bearer ' . $this->test_manager_jwt]
             );
@@ -274,7 +277,8 @@ class TstDbBase extends DbBase {
                     'last_name' => 'Viewer',
                     'email' => $this->test_viewer_email,
                     'role' => 'viewer',
-                    'affiliate_id' => $this->test_affiliate_id
+                    'affiliate_id' => $this->test_affiliate_id,
+                    'skip_email' => true
                 ],
                 ['Authorization' => 'Bearer ' . $this->test_manager_jwt]
             );

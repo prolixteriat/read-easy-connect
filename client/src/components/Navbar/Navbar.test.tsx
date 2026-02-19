@@ -99,7 +99,7 @@ describe('Navbar', () => {
     );
 
     expect(screen.getByText('Login')).toBeInTheDocument();
-    expect(screen.getByText('Connect')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Connect'))).toBeInTheDocument();
   });
 
   it('renders user menu when user is authenticated', () => {
@@ -116,7 +116,7 @@ describe('Navbar', () => {
     );
 
     expect(screen.getByLabelText('User')).toBeInTheDocument();
-    expect(screen.getByText('Connect')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Connect'))).toBeInTheDocument();
   });
 
   it('opens login modal when login is clicked', async () => {

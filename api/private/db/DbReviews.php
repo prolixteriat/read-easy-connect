@@ -253,7 +253,7 @@ class DbReviews extends DbBase {
                 $params[':start'] = $data['start_date'];
             }
             if (isset($data['end_date'])) {
-                $query .= ' AND r.date <= :end';
+                $query .= ' AND DATE(r.date) <= :end';
                 $params[':end'] = $data['end_date'];
             }
             

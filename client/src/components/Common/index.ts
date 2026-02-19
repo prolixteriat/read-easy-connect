@@ -5,3 +5,4 @@ export { default as ErrorDialog } from './ErrorDialog';
 export { default as HoverHelp } from './HoverHelp';
 export { default as Loading } from './Loading';
 export { default as MessageDialog } from './MessageDialog';
+export { NotesDisplay } from './NotesDisplay';

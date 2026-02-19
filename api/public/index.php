@@ -61,6 +61,7 @@ $errorMiddleware->setDefaultErrorHandler($customErrorHandler);
 require_once __DIR__ . '/../private/RouteCoaches.php';
 require_once __DIR__ . '/../private/RouteLoans.php';
 require_once __DIR__ . '/../private/RouteLessons.php';
+require_once __DIR__ . '/../private/RouteNotes.php';
 require_once __DIR__ . '/../private/RouteOrg.php';
 require_once __DIR__ . '/../private/RouteReaders.php';
 require_once __DIR__ . '/../private/RouteReports.php';

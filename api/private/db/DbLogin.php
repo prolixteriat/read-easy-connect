@@ -35,8 +35,15 @@ class DbLogin extends DbBase {
             if ($user && $user['mfa_enabled'] && $user['mfa_secret'] === null) {
                 $mfaService = new MFAService();
                 $secret = $mfaService->generate_secret();
-                $uri = $mfaService->get_provisioning_uri($secret, $email, 
-                                                        MFA_LABEL);
+                $uri = $mfaService->get_provisioning_uri($secret, $email, MFA_LABEL);
+                # Handle space encoding for authenticator app labels
+                $uri = preg_replace_callback(
+                    '#^otpauth://totp/([^?]+)#',
+                    function ($matches) {
+                        return 'otpauth://totp/' . str_replace('+', '%20', $matches[1]);
+                    },
+                    $uri
+                );                                                        
                 $qrCode = base64_encode($mfaService->generate_qr_code($uri));
                 
                 $status = new Status(false, 202, ['message' => 'MFA setup required']);

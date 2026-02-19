@@ -217,7 +217,7 @@ class DbLoans extends DbBase {
             }
             
             if (isset($params['end_date'])) {
-                $sql .= ' AND l.loan_date <= :end_date';
+                $sql .= ' AND DATE(l.loan_date) <= :end_date';
                 $query_params[':end_date'] = $params['end_date'];
             }
             
