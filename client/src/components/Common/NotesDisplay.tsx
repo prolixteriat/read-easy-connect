@@ -2,10 +2,13 @@ import { useState, useCallback } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { X } from 'lucide-react';
 import { type TNotesSchema, type TNoteSchema } from '@hooks/useNotes';
-import { addReaderNote, addCoachNote, editReaderNote, editCoachNote, type TAddReaderNoteData, type TAddCoachNoteData, type TEditReaderNoteData, type TEditCoachNoteData } from '@lib/api/apiNotes';
+import { addReaderNote, addCoachNote, addReferralNote, editReaderNote, editCoachNote, editReferralNote, type TAddReaderNoteData, type TAddCoachNoteData, type TAddReferralNoteData, type TEditReaderNoteData, type TEditCoachNoteData, type TEditReferralNoteData } from '@lib/api/apiNotes';
 import { Button, ErrorDialog } from '@components/Common';
+import Loading from '@components/Common/Loading';
 import { JwtManager } from '@lib/jwtManager';
 import { asString } from '@lib/helper';
+
+// -----------------------------------------------------------------------------
 
 interface NotesDisplayProps {
   data: TNotesSchema | undefined;
@@ -13,7 +16,7 @@ interface NotesDisplayProps {
   error: Error | undefined;
   aboutId?: number;
   onRefresh?: () => void;
-  noteType?: 'reader' | 'coach';
+  noteType?: 'reader' | 'coach' | 'referral';
 }
 
 export function NotesDisplay({ data, isLoading, error, aboutId, onRefresh, noteType = 'reader' }: NotesDisplayProps): React.JSX.Element {
@@ -51,6 +54,8 @@ export function NotesDisplay({ data, isLoading, error, aboutId, onRefresh, noteT
       
       const result = noteType === 'coach' 
         ? await addCoachNote(noteData as TAddCoachNoteData)
+        : noteType === 'referral'
+        ? await addReferralNote(noteData as TAddReferralNoteData)
         : await addReaderNote(noteData as TAddReaderNoteData);
       
       if (result.success) {
@@ -72,13 +77,6 @@ export function NotesDisplay({ data, isLoading, error, aboutId, onRefresh, noteT
     setIsAddOpen(false);
     setNewNote({ note: '', note_at: new Date().toISOString().split('T')[0] });
     setErrorMessage('');
-  }, []);
-
-  const handleOpenModal = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setErrorMessage('');
-    setIsAddOpen(true);
   }, []);
 
   const handleRowClick = useCallback((note: TNoteSchema) => {
@@ -115,6 +113,8 @@ export function NotesDisplay({ data, isLoading, error, aboutId, onRefresh, noteT
       
       const result = noteType === 'coach' 
         ? await editCoachNote(noteData as TEditCoachNoteData)
+        : noteType === 'referral'
+        ? await editReferralNote(noteData as TEditReferralNoteData)
         : await editReaderNote(noteData as TEditReaderNoteData);
       
       if (result.success) {
@@ -140,7 +140,7 @@ export function NotesDisplay({ data, isLoading, error, aboutId, onRefresh, noteT
     setErrorMessage('');
   }, []);
 
-  if (isLoading) return <div className="p-4">Loading notes...</div>;
+  if (isLoading) return <div className="p-4"><Loading position="center" /></div>;
   if (error) return <div className="p-4 text-red-600">Error loading notes: {error.message}</div>;
 
   return (
@@ -161,22 +161,12 @@ export function NotesDisplay({ data, isLoading, error, aboutId, onRefresh, noteT
                   <th className="px-4 py-2 text-left text-sm font-medium text-gray-700 border-b">
                     Note
                   </th>
-                  <th className="w-24 px-4 py-2 text-right border-b">
-                    <Button 
-                      variant='primary' 
-                      onClick={handleOpenModal}
-                      type="button"
-                      className="text-xs px-2 py-1 whitespace-nowrap"
-                    >
-                      Add Note
-                    </Button>
-                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {(!data || data.length === 0) ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={3} className="px-4 py-8 text-center text-gray-500">
                       No notes found
                     </td>
                   </tr>
@@ -192,7 +182,6 @@ export function NotesDisplay({ data, isLoading, error, aboutId, onRefresh, noteT
                       <td className="px-4 py-2 text-sm text-gray-900 border-b">
                         {note.note}
                       </td>
-                      <td className="w-24 px-4 py-2 border-b"></td>
                     </tr>
                   ))
                 )}
@@ -204,16 +193,6 @@ export function NotesDisplay({ data, isLoading, error, aboutId, onRefresh, noteT
 
       {/* Mobile card view */}
       <div className="md:hidden">
-        <div className="mb-4 flex justify-end">
-          <Button 
-            variant='primary' 
-            onClick={handleOpenModal}
-            type="button"
-            className="text-xs px-2 py-1 whitespace-nowrap"
-          >
-            Add Note
-          </Button>
-        </div>
         {(!data || data.length === 0) ? (
           <div className="p-4 text-center text-gray-500">No notes found</div>
         ) : (
@@ -246,8 +225,10 @@ export function NotesDisplay({ data, isLoading, error, aboutId, onRefresh, noteT
             
             <div className="space-y-4">
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>Note *</label>
+                <label htmlFor='add-note-content' className='block text-sm font-medium text-gray-700 mb-1'>Note *</label>
                 <textarea
+                  id='add-note-content'
+                  name='add-note-content'
                   className='w-full rounded-md border p-2'
                   rows={4}
                   value={newNote.note}
@@ -257,8 +238,10 @@ export function NotesDisplay({ data, isLoading, error, aboutId, onRefresh, noteT
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>Date *</label>
+                <label htmlFor='add-note-date' className='block text-sm font-medium text-gray-700 mb-1'>Date *</label>
                 <input
+                  id='add-note-date'
+                  name='add-note-date'
                   type='date'
                   className='w-full rounded-md border p-2'
                   value={newNote.note_at}
@@ -296,8 +279,10 @@ export function NotesDisplay({ data, isLoading, error, aboutId, onRefresh, noteT
             
             <div className="space-y-4">
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>Note *</label>
+                <label htmlFor='edit-note-content' className='block text-sm font-medium text-gray-700 mb-1'>Note *</label>
                 <textarea
+                  id='edit-note-content'
+                  name='edit-note-content'
                   className='w-full rounded-md border p-2'
                   rows={4}
                   value={editNote.note}
@@ -307,8 +292,10 @@ export function NotesDisplay({ data, isLoading, error, aboutId, onRefresh, noteT
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>Date *</label>
+                <label htmlFor='edit-note-date' className='block text-sm font-medium text-gray-700 mb-1'>Date *</label>
                 <input
+                  id='edit-note-date'
+                  name='edit-note-date'
                   type='date'
                   className='w-full rounded-md border p-2'
                   value={editNote.note_at}
@@ -342,3 +329,6 @@ export function NotesDisplay({ data, isLoading, error, aboutId, onRefresh, noteT
     </>
   );
 }
+// -----------------------------------------------------------------------------
+// End
+// -----------------------------------------------------------------------------

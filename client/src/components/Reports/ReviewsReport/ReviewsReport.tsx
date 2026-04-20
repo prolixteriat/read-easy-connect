@@ -10,7 +10,7 @@ import {
 } from '@tanstack/react-table';
 import { ArrowUpDown, Copy } from 'lucide-react';
 
-import { useReviewsCoordinator } from '@hooks/useReviews';
+import { useReviewsCoordinator, useReviews } from '@hooks/useReviews';
 import { useVenues } from '@hooks/useOrg';
 import { JwtManager } from '@lib/jwtManager';
 import DateRangePicker from '@components/Common/DateRangePicker';
@@ -42,13 +42,20 @@ export default function ReviewsReport(): React.JSX.Element {
   const [showCopied, setShowCopied] = useState(false);
 
   const jwtManager = new JwtManager();
+  const userRole = jwtManager.getRole();
   const coordinatorId = jwtManager.getUserId();
 
-  const { data, error, isLoading } = useReviewsCoordinator(
+  const coordinatorHook = useReviewsCoordinator(
     coordinatorId,
     dateRange.start || undefined,
     dateRange.end || undefined
   );
+  const managerHook = useReviews(
+    dateRange.start || undefined,
+    dateRange.end || undefined
+  );
+
+  const { data, error, isLoading } = userRole === 'coordinator' ? coordinatorHook : managerHook;
   const { data: venuesData } = useVenues();
 
   const copyToClipboard = useCallback(async () => {
@@ -179,6 +186,7 @@ export default function ReviewsReport(): React.JSX.Element {
 
       <div className='flex gap-2 mb-4'>
         <input
+          id='reviews-filter'
           type='text'
           placeholder='Filter...'
           className='flex-1 rounded-md border p-2 text-sm'

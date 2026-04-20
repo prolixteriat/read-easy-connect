@@ -47,21 +47,28 @@ class Status {
 # ------------------------------------------------------------------------------
 
 enum AuditType: string {
-    case LOGIN         = 'login';
-    case LOGOUT        = 'logout';
-    case USER_ADDED    = 'user_added';
-    case USER_EDITED   = 'user_edited';
-    case COACH_ADDED   = 'coach_added';
-    case COACH_EDITED  = 'coach_edited';
-    case READER_ADDED  = 'reader_added';
-    case READER_EDITED = 'reader_edited';
-    case LESSON_ADDED  = 'lesson_added';
-    case LESSON_EDITED = 'lesson_edited';
-    case REVIEW_ADDED  = 'review_added';
-    case REVIEW_EDITED = 'review_edited';
-    case STATUS_CHANGE = 'status_change';
-    case PASSWORD_RESET= 'password_reset';
-    case OTHER         = 'other';
+    case LOGIN          = 'login';
+    case LOGOUT         = 'logout';
+    case USER_ADDED     = 'user_added';
+    case USER_EDITED    = 'user_edited';
+    case COACH_ADDED    = 'coach_added';
+    case COACH_EDITED   = 'coach_edited';
+    case READER_ADDED   = 'reader_added';
+    case READER_EDITED  = 'reader_edited';
+    case LESSON_ADDED   = 'lesson_added';
+    case LESSON_EDITED  = 'lesson_edited';
+    case REVIEW_ADDED   = 'review_added';
+    case REVIEW_EDITED  = 'review_edited';
+    case STATUS_CHANGE  = 'status_change';
+    case PASSWORD_RESET = 'password_reset';
+    case OTHER          = 'other';
+    case ADMIN          = 'admin';
+    case ORG_ADDED      = 'org_added';
+    case ORG_EDITED     = 'org_edited';
+    case CONTACT_ADDED  = 'contact_added';
+    case CONTACT_EDITED = 'contact_edited';
+    case REFERRAL_ADDED = 'referral_added';
+    case REFERRAL_EDITED= 'referral_edited';
 }
 
 enum StatusType: string {

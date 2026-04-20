@@ -3314,30 +3314,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"baseline-browser-mapping@npm:^2.8.3":
-  version: 2.8.4
-  resolution: "baseline-browser-mapping@npm:2.8.4"
+"baseline-browser-mapping@npm:^2.10.13, baseline-browser-mapping@npm:^2.8.3, baseline-browser-mapping@npm:^2.9.0":
+  version: 2.10.13
+  resolution: "baseline-browser-mapping@npm:2.10.13"
   bin:
-    baseline-browser-mapping: dist/cli.js
-  checksum: 10c0/d85c8e9b919d4f7d5b46cf3d89e6a8be6e74086934ff6f362b720be8e06656021a0207e2ba1efe8ae2563dec893a76ad15633e06f3e153984fab8118e2dc4ae7
-  languageName: node
-  linkType: hard
-
-"baseline-browser-mapping@npm:^2.9.0":
-  version: 2.9.0
-  resolution: "baseline-browser-mapping@npm:2.9.0"
-  bin:
-    baseline-browser-mapping: dist/cli.js
-  checksum: 10c0/cc2c4beaaa6310e57d55c0b38767b7d833cad17779a51bd2f1db7c8fb50d86629fa065cf65b9333bbe1d909270a084bd2177f0fbc832633b273504a8c805ab9c
-  languageName: node
-  linkType: hard
-
-"baseline-browser-mapping@npm:^2.9.14":
-  version: 2.9.14
-  resolution: "baseline-browser-mapping@npm:2.9.14"
-  bin:
-    baseline-browser-mapping: dist/cli.js
-  checksum: 10c0/c9bf03c65e9a6690e4abbe60c269ad14ce5578cac09fed51ff1ed6e899e049afb094c2b173365cb2397d48012a83747500db6e79dca2761faf548aee10574d3d
+    baseline-browser-mapping: dist/cli.cjs
+  checksum: 10c0/3296604492f600927a9f519c81164522ac26456e63eb7b6816e39bfbb184494b48c58490639f2c0e35be97969d3a03613fddddbfdd3074710592369ed36957d5
   languageName: node
   linkType: hard
 
@@ -3480,17 +3462,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"caniuse-lite@npm:^1.0.30001741":
-  version: 1.0.30001743
-  resolution: "caniuse-lite@npm:1.0.30001743"
-  checksum: 10c0/1bd730ca10d881a1ca9f55ce864d34c3b18501718c03976e0d3419f4694b715159e13fdef6d58ad47b6d2445d315940f3a01266658876828c820a3331aac021d
-  languageName: node
-  linkType: hard
-
-"caniuse-lite@npm:^1.0.30001759":
-  version: 1.0.30001759
-  resolution: "caniuse-lite@npm:1.0.30001759"
-  checksum: 10c0/b0f415960ba34995cda18e0d25c4e602f6917b9179290a76bdd0311423505b78cc93e558a90c98a22a1cc6b1781ab720ef6beea24ec7e29a1c1164ca72eac3a2
+"caniuse-lite@npm:^1.0.30001741, caniuse-lite@npm:^1.0.30001759":
+  version: 1.0.30001784
+  resolution: "caniuse-lite@npm:1.0.30001784"
+  checksum: 10c0/d6ff48177e48819a9041edab27d1ce9089b1ab9ba76f681b4925710dba5b00ff0347f70c6a99269d97fddc59e9f6947d219155b6bf4c1da9dd642503a03e5ce4
   languageName: node
   linkType: hard
 
@@ -6364,7 +6339,7 @@ __metadata:
     "@types/react-big-calendar": "npm:^1.16.3"
     "@types/react-dom": "npm:^19.1.7"
     "@vitejs/plugin-react": "npm:^5.0.0"
-    baseline-browser-mapping: "npm:^2.9.14"
+    baseline-browser-mapping: "npm:^2.10.13"
     chart.js: "npm:^4.5.0"
     esbuild: "npm:^0.27.2"
     eslint: "npm:^9.33.0"

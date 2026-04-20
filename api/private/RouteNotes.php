@@ -22,6 +22,17 @@ $app->post('/notes/add-coach-note', function (Request $request, Response $respon
 });
 # ------------------------------------------------------------------------------
 
+$app->post('/notes/add-org-note', function (Request $request, Response $response) {
+
+    $db = new DbNotes();
+    $status = $db->add_org_note($request);
+    $response->getBody()->write($status->message);
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus($status->code);
+});
+# ------------------------------------------------------------------------------
+
 $app->post('/notes/add-reader-note', function (Request $request, Response $response) {
 
     $db = new DbNotes();
@@ -30,6 +41,17 @@ $app->post('/notes/add-reader-note', function (Request $request, Response $respo
 	return $response
 			->withHeader('Content-Type', 'application/json')
             ->withStatus($status->code);   	
+});
+# ------------------------------------------------------------------------------
+
+$app->post('/notes/add-referral-note', function (Request $request, Response $response) {
+
+    $db = new DbNotes();
+    $status = $db->add_referral_note($request);
+    $response->getBody()->write($status->message);
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus($status->code);
 });
 # ------------------------------------------------------------------------------
 
@@ -44,6 +66,17 @@ $app->post('/notes/edit-coach-note', function (Request $request, Response $respo
 });
 # ------------------------------------------------------------------------------
 
+$app->post('/notes/edit-org-note', function (Request $request, Response $response) {
+
+    $db = new DbNotes();
+    $status = $db->edit_org_note($request);
+    $response->getBody()->write($status->message);
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus($status->code);
+});
+# ------------------------------------------------------------------------------
+
 $app->post('/notes/edit-reader-note', function (Request $request, Response $response) {
 
     $db = new DbNotes();
@@ -52,6 +85,17 @@ $app->post('/notes/edit-reader-note', function (Request $request, Response $resp
 	return $response
 			->withHeader('Content-Type', 'application/json')
             ->withStatus($status->code);   	
+});
+# ------------------------------------------------------------------------------
+
+$app->post('/notes/edit-referral-note', function (Request $request, Response $response) {
+
+    $db = new DbNotes();
+    $status = $db->edit_referral_note($request);
+    $response->getBody()->write($status->message);
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus($status->code);
 });
 # ------------------------------------------------------------------------------
 
@@ -66,6 +110,17 @@ $app->get('/notes/get-coach-notes', function (Request $request, Response $respon
 });
 # ------------------------------------------------------------------------------
 
+$app->get('/notes/get-org-notes', function (Request $request, Response $response) {
+
+    $db = new DbNotes();
+    $status = $db->get_org_notes($request);
+    $response->getBody()->write($status->message);
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus($status->code);
+});
+# ------------------------------------------------------------------------------
+
 $app->get('/notes/get-reader-notes', function (Request $request, Response $response) {
 
     $db = new DbNotes();
@@ -74,6 +129,17 @@ $app->get('/notes/get-reader-notes', function (Request $request, Response $respo
 	return $response
 			->withHeader('Content-Type', 'application/json')
             ->withStatus($status->code);   	
+});
+# ------------------------------------------------------------------------------
+
+$app->get('/notes/get-referral-notes', function (Request $request, Response $response) {
+
+    $db = new DbNotes();
+    $status = $db->get_referral_notes($request);
+    $response->getBody()->write($status->message);
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus($status->code);
 });
 # ------------------------------------------------------------------------------
 

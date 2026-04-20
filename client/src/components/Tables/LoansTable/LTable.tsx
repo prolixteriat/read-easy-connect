@@ -197,6 +197,8 @@ export function LTable({ data, readers, onSave, showReturnedAndLost, setShowRetu
         <div className='flex flex-col sm:flex-row gap-2 mb-4'>
           <div className='flex-1 relative'>
             <input
+              id='loans-filter'
+              name='filter'
               type='text'
               placeholder='Filter...'
               className='w-full rounded-md border p-2 text-sm pr-48'
@@ -232,16 +234,20 @@ export function LTable({ data, readers, onSave, showReturnedAndLost, setShowRetu
         {selectedRow && (
           <>
             <div>
-              <label className='block text-sm font-medium text-gray-700'>Reader</label>
+              <label htmlFor='edit-reader' className='block text-sm font-medium text-gray-700'>Reader</label>
               <input
+                id='edit-reader'
+                name='reader'
                 className='w-full rounded-md border p-2 bg-gray-100'
                 value={selectedRow.reader_name}
                 disabled
               />
             </div>
             <div>
-              <label className='block text-sm font-medium text-gray-700'>Item *</label>
+              <label htmlFor='edit-item' className='block text-sm font-medium text-gray-700'>Item *</label>
               <input
+                id='edit-item'
+                name='item'
                 className='w-full rounded-md border p-2'
                 value={selectedRow.item}
                 onChange={(e) => setSelectedRow({ ...selectedRow, item: e.target.value })}
@@ -249,8 +255,10 @@ export function LTable({ data, readers, onSave, showReturnedAndLost, setShowRetu
             </div>
             <div className='grid grid-cols-2 gap-3'>
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Loan Date *</label>
+                <label htmlFor='edit-loan-date' className='block text-sm font-medium text-gray-700'>Loan Date *</label>
                 <input
+                  id='edit-loan-date'
+                  name='loan_date'
                   type='date'
                   className='w-full rounded-md border p-2'
                   value={selectedRow.loan_date ? new Date(selectedRow.loan_date).toISOString().split('T')[0] : ''}
@@ -258,8 +266,10 @@ export function LTable({ data, readers, onSave, showReturnedAndLost, setShowRetu
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Return Date</label>
+                <label htmlFor='edit-return-date' className='block text-sm font-medium text-gray-700'>Return Date</label>
                 <input
+                  id='edit-return-date'
+                  name='return_date'
                   type='date'
                   className='w-full rounded-md border p-2'
                   value={selectedRow.return_date ? new Date(selectedRow.return_date).toISOString().split('T')[0] : ''}
@@ -268,8 +278,10 @@ export function LTable({ data, readers, onSave, showReturnedAndLost, setShowRetu
               </div>
             </div>
             <div>
-              <label className='block text-sm font-medium text-gray-700'>Status</label>
+              <label htmlFor='edit-status' className='block text-sm font-medium text-gray-700'>Status</label>
               <select
+                id='edit-status'
+                name='status'
                 className='w-full rounded-md border p-2'
                 value={selectedRow.status}
                 onChange={(e) => setSelectedRow({ ...selectedRow, status: e.target.value as TLoanStatus })}
@@ -292,8 +304,10 @@ export function LTable({ data, readers, onSave, showReturnedAndLost, setShowRetu
         isSaving={tableState.isSaving}
       >
         <div>
-          <label className='block text-sm font-medium text-gray-700'>Reader *</label>
+          <label htmlFor='add-reader' className='block text-sm font-medium text-gray-700'>Reader *</label>
           <select
+            id='add-reader'
+            name='reader_id'
             className={`w-full rounded-md border p-2 ${tableState.errors.reader_id ? 'border-red-500' : ''}`}
             value={newLoan.reader_id}
             onChange={(e) => setNewLoan({ ...newLoan, reader_id: Number(e.target.value) })}
@@ -308,8 +322,10 @@ export function LTable({ data, readers, onSave, showReturnedAndLost, setShowRetu
           {tableState.errors.reader_id && <p className='text-red-500 text-xs mt-1'>{tableState.errors.reader_id}</p>}
         </div>
         <div>
-          <label className='block text-sm font-medium text-gray-700'>Item *</label>
+          <label htmlFor='add-item' className='block text-sm font-medium text-gray-700'>Item *</label>
           <input
+            id='add-item'
+            name='item'
             className={`w-full rounded-md border p-2 ${tableState.errors.item ? 'border-red-500' : ''}`}
             value={newLoan.item}
             onChange={(e) => setNewLoan({ ...newLoan, item: e.target.value })}
@@ -317,8 +333,10 @@ export function LTable({ data, readers, onSave, showReturnedAndLost, setShowRetu
           {tableState.errors.item && <p className='text-red-500 text-xs mt-1'>{tableState.errors.item}</p>}
         </div>
         <div>
-          <label className='block text-sm font-medium text-gray-700'>Loan Date *</label>
+          <label htmlFor='add-loan-date' className='block text-sm font-medium text-gray-700'>Loan Date *</label>
           <input
+            id='add-loan-date'
+            name='loan_date'
             type='date'
             className={`w-full rounded-md border p-2 ${tableState.errors.loan_date ? 'border-red-500' : ''}`}
             value={newLoan.loan_date}

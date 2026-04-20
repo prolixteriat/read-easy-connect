@@ -298,6 +298,8 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
       <div className='flex flex-col sm:flex-row gap-2 mb-4'>
         <div className='flex-1 relative'>
           <input
+            id='filter-input'
+            name='filter'
             type='text'
             placeholder='Filter...'
             className='w-full rounded-md border p-2 text-sm pr-32'
@@ -305,8 +307,10 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
             onChange={(e) => setGlobalFilter(e.target.value)}
           />
           {setShowLeavers && (
-            <label className='absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1 text-xs'>
+            <label htmlFor='show-leavers-checkbox' className='absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1 text-xs'>
               <input
+                id='show-leavers-checkbox'
+                name='showLeavers'
                 type='checkbox'
                 checked={showLeavers}
                 onChange={(e) => setShowLeavers(e.target.checked)}
@@ -421,8 +425,10 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
                 className='space-y-3'
               >
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>First Name *</label>
+                  <label htmlFor='edit-first-name' className='block text-sm font-medium text-gray-700'>First Name *</label>
                   <input
+                    id='edit-first-name'
+                    name='firstName'
                     className={`w-full rounded-md border p-2 ${errors.first_name ? 'border-red-500' : ''}`}
                     value={selectedRow.first_name}
                     onChange={(e) =>
@@ -432,8 +438,10 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
                   {errors.first_name && <p className='text-red-500 text-xs mt-1'>{errors.first_name}</p>}
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Last Name *</label>
+                  <label htmlFor='edit-last-name' className='block text-sm font-medium text-gray-700'>Last Name *</label>
                   <input
+                    id='edit-last-name'
+                    name='lastName'
                     className={`w-full rounded-md border p-2 ${errors.last_name ? 'border-red-500' : ''}`}
                     value={selectedRow.last_name}
                     onChange={(e) =>
@@ -443,8 +451,10 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
                   {errors.last_name && <p className='text-red-500 text-xs mt-1'>{errors.last_name}</p>}
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Status</label>
+                  <label htmlFor='edit-status' className='block text-sm font-medium text-gray-700'>Status</label>
                   <select
+                    id='edit-status'
+                    name='status'
                     className='w-full rounded-md border p-2'
                     value={selectedRow.status}
                     onChange={(e) =>
@@ -457,8 +467,10 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
                   </select>
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Access Suspended</label>
+                  <label htmlFor='edit-disabled' className='block text-sm font-medium text-gray-700'>Access Suspended</label>
                   <select
+                    id='edit-disabled'
+                    name='disabled'
                     className='w-full rounded-md border p-2'
                     value={selectedRow.disabled}
                     onChange={(e) =>
@@ -514,8 +526,10 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
               className='space-y-3'
             >
               <div>
-                <label className='block text-sm font-medium text-gray-700'>First Name *</label>
+                <label htmlFor='add-first-name' className='block text-sm font-medium text-gray-700'>First Name *</label>
                 <input
+                  id='add-first-name'
+                  name='firstName'
                   className={`w-full rounded-md border p-2 ${errors.first_name ? 'border-red-500' : ''}`}
                   value={newUser.first_name}
                   onChange={(e) => setNewUser({ ...newUser, first_name: e.target.value })}
@@ -523,8 +537,10 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
                 {errors.first_name && <p className='text-red-500 text-xs mt-1'>{errors.first_name}</p>}
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Last Name *</label>
+                <label htmlFor='add-last-name' className='block text-sm font-medium text-gray-700'>Last Name *</label>
                 <input
+                  id='add-last-name'
+                  name='lastName'
                   className={`w-full rounded-md border p-2 ${errors.last_name ? 'border-red-500' : ''}`}
                   value={newUser.last_name}
                   onChange={(e) => setNewUser({ ...newUser, last_name: e.target.value })}
@@ -532,8 +548,10 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
                 {errors.last_name && <p className='text-red-500 text-xs mt-1'>{errors.last_name}</p>}
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Email *</label>
+                <label htmlFor='add-email' className='block text-sm font-medium text-gray-700'>Email *</label>
                 <input
+                  id='add-email'
+                  name='email'
                   type='email'
                   className={`w-full rounded-md border p-2 ${errors.email ? 'border-red-500' : ''}`}
                   value={newUser.email}
@@ -542,8 +560,10 @@ export function UTable({ data, onSave, roleType, showLeavers, setShowLeavers }: 
                 {errors.email && <p className='text-red-500 text-xs mt-1'>{errors.email}</p>}
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Status</label>
+                <label htmlFor='add-status' className='block text-sm font-medium text-gray-700'>Status</label>
                 <select
+                  id='add-status'
+                  name='status'
                   className='w-full rounded-md border p-2'
                   value={newUser.status}
                   onChange={(e) => setNewUser({ ...newUser, status: e.target.value as TUserStatus })}

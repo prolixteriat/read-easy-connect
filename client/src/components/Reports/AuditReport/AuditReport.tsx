@@ -175,11 +175,14 @@ export default function AuditReport(): React.JSX.Element {
 
       <div className='flex gap-2 mb-4'>
         <input
+          id='audit-filter-input'
+          name='filter'
           type='text'
           placeholder='Filter...'
           className='flex-1 rounded-md border p-2 text-sm'
           value={globalFilter ?? ''}
           onChange={(e) => setGlobalFilter(e.target.value)}
+          autoComplete='off'
         />
       </div>
 

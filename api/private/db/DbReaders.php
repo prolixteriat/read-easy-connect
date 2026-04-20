@@ -18,11 +18,10 @@ class DbReaders extends DbBase {
     # --------------------------------------------------------------------------
     # Role: manager, coordinator
     # Mandatory: n/a
-    # Optional : area_id, coach_id, level, status, referrer_name, referrer_org, 
-    #   availability, notes, enrolment_at, coaching_start_at, graduation_at, 
-    #   TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, TP5_start_at, 
-    #   TP1_completion_at, TP2_completion_at, TP3_completion_at, TP4_completion_at, 
-    #  TP5_completion_at, ons4_1, ons4_2, ons4_3
+    # Optional : referral_id, area_id, coach_id, status, availability, notes, enrolment_at, 
+    #   coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, 
+    #   TP4_start_at, TP5_start_at, TP1_completion_at, TP2_completion_at, 
+    #   TP3_completion_at, TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3
 
     public function add_reader(Request $request): Status {
         try {
@@ -31,18 +30,7 @@ class DbReaders extends DbBase {
                 return $status; 
             }
             $params = $this->sanitise_array($request->getParsedBody());
-            /*
-            $required_params = ['name'];
-            $status = $this->validate_params($params, $required_params);
-            if (!$status->success) { 
-                return $status; 
-            }
             
-            # Validate reader name is not empty
-            if (empty(trim($params['name']))) {
-                return new Status(false, 400, ['message' => 'Reader name cannot be empty']);
-            }
-            */
             $name = $this->create_reader_name();
             # Validate coach_id if provided
             if (isset($params['coach_id']) && $params['coach_id']) {
@@ -53,24 +41,28 @@ class DbReaders extends DbBase {
                 }
             }
 
+            # Validate TP dates
+            $tp_validation = $this->validate_tp_dates($params);
+            if (!$tp_validation->success) {
+                return $tp_validation;
+            }
+
             $user_affiliate = $this->get_user_affiliate_id($this->user_id, $this->role);
             
             if (!$user_affiliate) {
                 return new Status(false, 403, ['message' => 'Manager not associated with any affiliate']);
             }
 
-            $sql = 'INSERT INTO readers (name, affiliate_id, area_id, coach_id, 
-                        referrer_name, referrer_org, level, status, availability, 
-                        notes, enrolment_at, coaching_start_at, graduation_at, 
-                        TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, 
-                        TP5_start_at, TP1_completion_at, TP2_completion_at,
-                        TP3_completion_at, TP4_completion_at, TP5_completion_at, 
-                        ons4_1, ons4_2, ons4_3) 
-                    VALUES (:name, :affiliate_id, :area_id, :coach_id, 
-                        :referrer_name, :referrer_org, :level, :status, :availability, 
-                        :notes, :enrolment_at, :coaching_start_at, :graduation_at, 
-                        :TP1_start_at, :TP2_start_at, :TP3_start_at, :TP4_start_at, 
-                        :TP5_start_at, :TP1_completion_at, :TP2_completion_at, 
+            $sql = 'INSERT INTO readers (name, affiliate_id, referral_id, area_id, 
+                        coach_id, status, availability, notes, enrolment_at, 
+                        coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, 
+                        TP3_start_at, TP4_start_at, TP5_start_at, TP1_completion_at, 
+                        TP2_completion_at, TP3_completion_at, TP4_completion_at, 
+                        TP5_completion_at, ons4_1, ons4_2, ons4_3) 
+                    VALUES (:name, :affiliate_id, :referral_id, :area_id, :coach_id, 
+                        :status, :availability, :notes, :enrolment_at, :coaching_start_at, 
+                        :graduation_at, :TP1_start_at, :TP2_start_at, :TP3_start_at, 
+                        :TP4_start_at, :TP5_start_at, :TP1_completion_at, :TP2_completion_at, 
                         :TP3_completion_at, :TP4_completion_at, :TP5_completion_at, 
                         :ons4_1, :ons4_2, :ons4_3)';
 
@@ -78,11 +70,9 @@ class DbReaders extends DbBase {
             $stmt->execute([
                 ':name'               => $name,
                 ':affiliate_id'       => $user_affiliate,
+                ':referral_id'        => $params['referral_id'] ?? null,
                 ':area_id'            => $params['area_id'] ?? null,
                 ':coach_id'           => $params['coach_id'] ?? null,
-                ':referrer_name'      => $params['referrer_name'] ?? null,
-                ':referrer_org'       => $params['referrer_org'] ?? null,
-                ':level'              => $params['level'] ?? 'TP1',
                 ':status'             => $params['status'] ?? 'NYS',
                 ':availability'       => $params['availability'] ?? null,
                 ':notes'              => $params['notes'] ?? null,
@@ -115,7 +105,7 @@ class DbReaders extends DbBase {
             $status = new Status(true, 200, 
                 ['reader_id' => (int)$reader_id,
                  'name' => $name]);
-            $this->add_audit(AuditType::OTHER, "Reader added: {$name}", $this->user_id, $user_affiliate);
+            $this->add_audit(AuditType::READER_ADDED, "Reader added: {$name}", $this->user_id, $user_affiliate);
             
         } catch (Exception $e) {
             $this->logger->error('add_reader: ' . $e->getMessage());
@@ -128,7 +118,7 @@ class DbReaders extends DbBase {
     # --------------------------------------------------------------------------
     # Role: manager, coordinator
     # Mandatory: reader_id
-    # Optional : area_id, coach_id, level, status, referrer_name, referrer_org, availability, notes, enrolment_at, coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, TP5_start_at, TP1_completion_at, TP2_completion_at, TP3_completion_at, TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3 
+    # Optional : referral_id, area_id, coach_id, status, availability, notes, enrolment_at, coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, TP5_start_at, TP1_completion_at, TP2_completion_at, TP3_completion_at, TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3 
 
     public function edit_reader(Request $request): Status {
         try {
@@ -150,12 +140,11 @@ class DbReaders extends DbBase {
 
             $reader_id = (int)$params['reader_id'];
 
-            $sql = 'SELECT name, affiliate_id, area_id, coach_id, referrer_name, 
-                    referrer_org, level, status, availability, notes, enrolment_at, 
-                    coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, 
-                    TP3_start_at, TP4_start_at, TP5_start_at, TP1_completion_at, 
-                    TP2_completion_at, TP3_completion_at, TP4_completion_at, 
-                    TP5_completion_at, ons4_1, ons4_2, ons4_3
+            $sql = 'SELECT name, affiliate_id, referral_id, area_id, coach_id, level, 
+                    status, availability, notes, enrolment_at, coaching_start_at, 
+                    graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, 
+                    TP5_start_at, TP1_completion_at, TP2_completion_at, TP3_completion_at, 
+                    TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3
                    FROM readers 
                    WHERE reader_id = :reader_id 
                    LIMIT 1';
@@ -176,11 +165,9 @@ class DbReaders extends DbBase {
 
             $name = $result['name'];
             $affiliate_id = $result['affiliate_id'];
+            $referral_id = array_key_exists('referral_id', $params) ? $params['referral_id'] : $result['referral_id'];
             $area_id = array_key_exists('area_id', $params) ? $params['area_id'] : $result['area_id'];
             $coach_id = array_key_exists('coach_id', $params) ? $params['coach_id'] : $result['coach_id'];
-            $referrer_name = array_key_exists('referrer_name', $params) ? $params['referrer_name'] : $result['referrer_name'];
-            $referrer_org = array_key_exists('referrer_org', $params) ? $params['referrer_org'] : $result['referrer_org'];
-            $level = $params['level'] ?? $result['level'];
             $reader_status = $params['status'] ?? $result['status'];
             $availability = array_key_exists('availability', $params) ? $params['availability'] : $result['availability'];
             $notes = array_key_exists('notes', $params) ? $params['notes'] : $result['notes'];
@@ -201,16 +188,32 @@ class DbReaders extends DbBase {
             $ons4_2 = $params['ons4_2'] ?? $result['ons4_2'];
             $ons4_3 = $params['ons4_3'] ?? $result['ons4_3'];
 
+            # Validate TP dates
+            $merged_data = [
+                'TP1_start_at' => $TP1_start_at,
+                'TP2_start_at' => $TP2_start_at,
+                'TP3_start_at' => $TP3_start_at,
+                'TP4_start_at' => $TP4_start_at,
+                'TP5_start_at' => $TP5_start_at,
+                'TP1_completion_at' => $TP1_completion_at,
+                'TP2_completion_at' => $TP2_completion_at,
+                'TP3_completion_at' => $TP3_completion_at,
+                'TP4_completion_at' => $TP4_completion_at,
+                'TP5_completion_at' => $TP5_completion_at
+            ];
+            $tp_validation = $this->validate_tp_dates($merged_data);
+            if (!$tp_validation->success) {
+                return $tp_validation;
+            }
+
             # Handle coach status updates
             $original_coach_id = $result['coach_id'];
             
             $sql = 'UPDATE readers
                     SET affiliate_id = :affiliate_id,
+                        referral_id = :referral_id,
                         area_id = :area_id,
                         coach_id = :coach_id,
-                        referrer_name = :referrer_name,
-                        referrer_org = :referrer_org,
-                        level = :level,
                         status = :status,
                         availability = :availability,
                         notes = :notes,
@@ -234,11 +237,9 @@ class DbReaders extends DbBase {
             $stmt = $this->conn->prepare($sql);                    
             $stmt->execute([
                 ':affiliate_id'       => $affiliate_id,
+                ':referral_id'        => $referral_id,
                 ':area_id'            => $area_id,
                 ':coach_id'           => $coach_id,
-                ':referrer_name'      => $referrer_name,
-                ':referrer_org'       => $referrer_org,
-                ':level'              => $level,
                 ':status'             => $reader_status,
                 ':availability'       => $availability,
                 ':notes'              => $notes,
@@ -514,6 +515,58 @@ class DbReaders extends DbBase {
         } catch (Exception $e) {
             $this->logger->error('send_tp_completion_email: ' . $e->getMessage());
         }
+    }
+    # --------------------------------------------------------------------------
+
+    private function validate_tp_dates(array $data): Status {
+        $tps = ['TP1', 'TP2', 'TP3', 'TP4', 'TP5'];
+        
+        foreach ($tps as $tp) {
+            $start = $data["{$tp}_start_at"] ?? null;
+            $completion = $data["{$tp}_completion_at"] ?? null;
+            
+            # Rule 1: Completion must follow start
+            if ($completion !== null && $start !== null && substr($start, 0, 10) > substr($completion, 0, 10)) {
+                return new Status(false, 400, 
+                    ['message' => "{$tp} completion must be after start"]);
+            }
+        }
+        
+        for ($i = 1; $i < count($tps); $i++) {
+            $prev_tp = $tps[$i - 1];
+            $curr_tp = $tps[$i];
+            
+            $prev_start = $data["{$prev_tp}_start_at"] ?? null;
+            $prev_completion = $data["{$prev_tp}_completion_at"] ?? null;
+            $curr_start = $data["{$curr_tp}_start_at"] ?? null;
+            $curr_completion = $data["{$curr_tp}_completion_at"] ?? null;
+            
+            # Rule 2: Cannot set TPn unless previous TP exists
+            if ($curr_start !== null && $prev_start === null) {
+                return new Status(false, 400, 
+                    ['message' => "Cannot set {$curr_tp} without {$prev_tp} start"]);
+            }
+            
+            # Rule 3: Chronological start order
+            if ($curr_start !== null && $prev_start !== null && substr($prev_start, 0, 10) > substr($curr_start, 0, 10)) {
+                return new Status(false, 400, 
+                    ['message' => "{$curr_tp} start must be after {$prev_tp} start"]);
+            }
+            
+            # Rule 4: Completion order
+            if ($curr_completion !== null && $prev_completion !== null && substr($prev_completion, 0, 10) > substr($curr_completion, 0, 10)) {
+                return new Status(false, 400, 
+                    ['message' => "{$curr_tp} completion must be after {$prev_tp} completion"]);
+            }
+            
+            # Rule 5: Cannot start next TP until previous completed
+            if ($curr_start !== null && ($prev_completion === null || substr($prev_completion, 0, 10) > substr($curr_start, 0, 10))) {
+                return new Status(false, 400, 
+                    ['message' => "Cannot start {$curr_tp} until {$prev_tp} is completed"]);
+            }
+        }
+        
+        return new Status(true, 200, []);
     }
     # --------------------------------------------------------------------------
 }

@@ -44,7 +44,7 @@ export default function ReaderDetailTable({ filteredData }: ReaderDetailTablePro
         reader.TP4 ? 'X' : '',
         reader.TP5 ? 'X' : '',
         reader.reader_status || '',
-        reader.reader_notes || ''
+        (reader.reader_notes || '').replace(/\r?\n/g, ' ')
       ]);
 
     const csvContent = [headers, ...rows]
@@ -112,7 +112,7 @@ export default function ReaderDetailTable({ filteredData }: ReaderDetailTablePro
               <th className='hidden sm:table-cell px-1 sm:px-4 py-2 text-left text-xs sm:text-sm font-medium text-gray-700 min-w-0'>
                 Coordinator
               </th>
-              <th className='px-1 sm:px-4 py-2 text-left text-xs sm:text-sm font-medium text-gray-700 min-w-0'>
+              <th className='px-1 sm:px-4 py-2 text-left text-xs sm:text-sm font-medium text-gray-700 w-fit'>
                 Reader
               </th>
               <th className='px-1 sm:px-4 py-2 text-center text-xs sm:text-sm font-medium text-gray-700 min-w-0'>
@@ -168,8 +168,8 @@ export default function ReaderDetailTable({ filteredData }: ReaderDetailTablePro
                       ) : null}
                       {isFirstCoordRow && (isFirstCoordRow = false)}
                     </td>
-                    <td className='px-1 sm:px-4 py-2 text-xs sm:text-sm text-gray-900 min-w-0'>
-                      <div className='break-words leading-tight'>
+                    <td className='px-1 sm:px-4 py-2 text-xs sm:text-sm text-gray-900 w-fit'>
+                      <div className='whitespace-nowrap leading-tight'>
                         {reader.reader_name || ''}
                       </div>
                     </td>
@@ -193,7 +193,7 @@ export default function ReaderDetailTable({ filteredData }: ReaderDetailTablePro
                     </td>
                     <td className='hidden sm:table-cell px-1 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 min-w-0'>
                       <div className='break-words leading-tight'>
-                        {reader.reader_notes || ''}
+                        {(reader.reader_notes || '').replace(/\r?\n/g, ' ')}
                       </div>
                     </td>
                   </tr>

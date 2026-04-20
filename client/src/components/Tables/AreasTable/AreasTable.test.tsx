@@ -27,9 +27,9 @@ vi.mock('@components/Common', () => ({
 import { useAreas } from '@hooks/useOrg';
 
 const mockAreas = [
-  { area_id: 1, name: 'North Area', affiliate_id: 1, created_at: '2024-01-01', disabled: 0, affiliate_name: 'Main Affiliate' },
-  { area_id: 2, name: 'South Area', affiliate_id: 1, created_at: '2024-01-02', disabled: 0, affiliate_name: 'Main Affiliate' },
-  { area_id: 3, name: 'East Area', affiliate_id: 2, created_at: '2024-01-03', disabled: 1, affiliate_name: 'Branch Affiliate' },
+  { area_id: 1, name: 'North Area', affiliate_id: 1, created_at: '2024-01-01', disabled: 0, reader_area: 1, org_area: 1, affiliate_name: 'Main Affiliate' },
+  { area_id: 2, name: 'South Area', affiliate_id: 1, created_at: '2024-01-02', disabled: 0, reader_area: 1, org_area: 0, affiliate_name: 'Main Affiliate' },
+  { area_id: 3, name: 'East Area', affiliate_id: 2, created_at: '2024-01-03', disabled: 1, reader_area: 0, org_area: 1, affiliate_name: 'Branch Affiliate' },
 ];
 
 // -----------------------------------------------------------------------------

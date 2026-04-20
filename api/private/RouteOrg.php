@@ -10,6 +10,36 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 # ------------------------------------------------------------------------------
+# TODO (delete: replaced with add-org)
+$app->post('/org/add-venue', function (Request $request, Response $response) {
+    $db = new DbOrg();
+    $status = $db->add_venue($request);
+    $response->getBody()->write($status->message);
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus($status->code);
+});
+# ------------------------------------------------------------------------------
+# TODO (delete: replaced with edit-org)
+$app->post('/org/edit-venue', function (Request $request, Response $response) {
+    $db = new DbOrg();
+    $status = $db->edit_venue($request);
+    $response->getBody()->write($status->message);
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus($status->code);
+});
+# ------------------------------------------------------------------------------
+# TODO (delete: replaced with get-orgs)
+$app->get('/org/get-venues', function (Request $request, Response $response) {
+    $db = new DbOrg();
+    $status = $db->get_venues($request);
+    $response->getBody()->write($status->message);
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus($status->code);
+});
+# ------------------------------------------------------------------------------
 
 $app->post('/org/add-affiliate', function (Request $request, Response $response) {
     $db = new DbOrg();
@@ -24,6 +54,16 @@ $app->post('/org/add-affiliate', function (Request $request, Response $response)
 $app->post('/org/add-area', function (Request $request, Response $response) {
     $db = new DbOrg();
     $status = $db->add_area($request);
+    $response->getBody()->write($status->message);
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus($status->code);
+});
+# ------------------------------------------------------------------------------
+
+$app->post('/org/add-org', function (Request $request, Response $response) {
+    $db = new DbOrg();
+    $status = $db->add_org($request);
     $response->getBody()->write($status->message);
     return $response
         ->withHeader('Content-Type', 'application/json')
@@ -61,6 +101,16 @@ $app->post('/org/edit-area', function (Request $request, Response $response) {
 });
 # ------------------------------------------------------------------------------
 
+$app->post('/org/edit-org', function (Request $request, Response $response) {
+    $db = new DbOrg();
+    $status = $db->edit_org($request);
+    $response->getBody()->write($status->message);
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus($status->code);
+});
+# ------------------------------------------------------------------------------
+
 $app->post('/org/edit-region', function (Request $request, Response $response) {
     $db = new DbOrg();
     $status = $db->edit_region($request);
@@ -90,40 +140,20 @@ $app->get('/org/get-areas', function (Request $request, Response $response) {
         ->withStatus($status->code);
 });
 # ------------------------------------------------------------------------------
+# TODO (done)
+$app->get('/org/get-orgs', function (Request $request, Response $response) {
+    $db = new DbOrg();
+    $status = $db->get_orgs($request);
+    $response->getBody()->write($status->message);
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus($status->code);
+});
+# ------------------------------------------------------------------------------
 
 $app->get('/org/get-regions', function (Request $request, Response $response) {
     $db = new DbOrg();
     $status = $db->get_regions($request);
-    $response->getBody()->write($status->message);
-    return $response
-        ->withHeader('Content-Type', 'application/json')
-        ->withStatus($status->code);
-});
-# ------------------------------------------------------------------------------
-
-$app->post('/org/add-venue', function (Request $request, Response $response) {
-    $db = new DbOrg();
-    $status = $db->add_venue($request);
-    $response->getBody()->write($status->message);
-    return $response
-        ->withHeader('Content-Type', 'application/json')
-        ->withStatus($status->code);
-});
-# ------------------------------------------------------------------------------
-
-$app->post('/org/edit-venue', function (Request $request, Response $response) {
-    $db = new DbOrg();
-    $status = $db->edit_venue($request);
-    $response->getBody()->write($status->message);
-    return $response
-        ->withHeader('Content-Type', 'application/json')
-        ->withStatus($status->code);
-});
-# ------------------------------------------------------------------------------
-
-$app->get('/org/get-venues', function (Request $request, Response $response) {
-    $db = new DbOrg();
-    $status = $db->get_venues($request);
     $response->getBody()->write($status->message);
     return $response
         ->withHeader('Content-Type', 'application/json')

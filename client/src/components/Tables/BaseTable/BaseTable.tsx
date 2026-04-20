@@ -38,45 +38,51 @@ export function BaseTable<T>({
       {children}
 
       {/* Desktop Table View */}
-      <div className='hidden md:block overflow-x-auto rounded-lg border shadow-sm'>
-        <table className='min-w-full divide-y divide-gray-200'>
-          <thead className='bg-gray-100'>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className='cursor-pointer px-4 py-2 text-left text-sm font-medium text-gray-700'
-                    onClick={header.column.getToggleSortingHandler()}
-                  >
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody className='divide-y divide-gray-100'>
-            {table.getRowModel().rows.map((row) => (
-              <tr
-                key={row.id}
-                className='hover:bg-gray-50 cursor-pointer'
-                onClick={() => onRowClick(row.original)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className='px-4 py-2 text-sm text-gray-700'>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className='hidden md:block'>
+        <div className='overflow-x-auto rounded-lg border shadow-sm max-h-[80vh] overflow-y-auto'>
+          <table className='min-w-full divide-y divide-gray-200'>
+            <thead className='bg-gray-100 sticky top-0 z-10'>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
+                      className='cursor-pointer px-4 py-2 text-left text-sm font-medium text-gray-700'
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            <tbody className='divide-y divide-gray-100'>
+              {table.getRowModel().rows.map((row) => (
+                <tr
+                  key={row.id}
+                  className={onRowClick ? 'hover:bg-gray-50 cursor-pointer' : 'hover:bg-gray-50'}
+                  onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className='px-4 py-2 text-sm text-gray-700'>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Mobile Card View */}
-      <div className='md:hidden space-y-3'>
+      <div className='md:hidden space-y-3 max-h-[80vh] overflow-y-auto'>
         {table.getRowModel().rows.map((row) => (
-          <div key={row.id} onClick={() => onRowClick(row.original)}>
+          <div 
+            key={row.id} 
+            onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+            className={onRowClick ? 'cursor-pointer' : ''}
+          >
             {renderMobileCard(row.original)}
           </div>
         ))}

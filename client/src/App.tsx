@@ -2,6 +2,8 @@ import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import { AuthProvider } from './context/AuthContext';
+import { SidebarProvider } from './context/SidebarContext';
+import { useSidebar } from './context/useSidebar';
 import { useAuth } from './context/useAuth';
 import { roleRoutes } from './routes/roleRoutes';
 
@@ -60,6 +62,8 @@ function AppRoutes(): React.JSX.Element {
 // -----------------------------------------------------------------------------
 
 function AppContent(): React.JSX.Element {
+  const { sidebarCollapsed } = useSidebar();
+  
   return (
     <div className='relative min-h-screen'>
       {/* Top Navbar / App Bar */}
@@ -67,7 +71,11 @@ function AppContent(): React.JSX.Element {
 
       {/* Main content area */}
       <div className='flex'>
-        <main className='flex-1 pt-12 p-4 transition-all duration-300 md:ml-56 overflow-hidden'>
+        <main className={`flex-1 pt-12 p-4 transition-all duration-300 overflow-hidden ${
+          sidebarCollapsed 
+            ? 'xl:ml-56 ml-0' 
+            : 'md:ml-56'
+        }`}>
           <AppRoutes />
         </main>
       </div>
@@ -79,9 +87,11 @@ function AppContent(): React.JSX.Element {
 export default function App(): React.JSX.Element {
   return (
     <AuthProvider>
-      <Router>
-        <AppContent />
-      </Router>
+      <SidebarProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </SidebarProvider>
     </AuthProvider>
   );
 };

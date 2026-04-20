@@ -66,25 +66,31 @@ export default function DateRangePicker({ startDate, endDate, onDateChange }: Da
       <div className="flex flex-col md:flex-row md:items-center gap-4">
         <div className="flex gap-2">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor='date-range-start' className="block text-sm font-medium text-gray-700 mb-1">
               Start Date
             </label>
             <input
+              id='date-range-start'
+              name='startDate'
               type="date"
               value={startDate}
               onChange={(e) => handleStartDateChange(e.target.value)}
               className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoComplete='off'
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor='date-range-end' className="block text-sm font-medium text-gray-700 mb-1">
               End Date
             </label>
             <input
+              id='date-range-end'
+              name='endDate'
               type="date"
               value={endDate}
               onChange={(e) => handleEndDateChange(e.target.value)}
               className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoComplete='off'
             />
           </div>
         </div>

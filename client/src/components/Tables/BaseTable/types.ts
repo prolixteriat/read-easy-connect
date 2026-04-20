@@ -5,7 +5,7 @@ import { type ColumnDef, type SortingState } from '@tanstack/react-table';
 export interface BaseTableProps<T> {
   data: T[];
   columns: ColumnDef<T>[];
-  onRowClick: (row: T) => void;
+  onRowClick?: (row: T) => void;
   onCopy?: () => void;
   filterPlaceholder?: string;
   globalFilter: string;

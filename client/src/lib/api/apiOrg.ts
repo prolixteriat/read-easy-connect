@@ -5,20 +5,6 @@ import { type IApiResponse, posterAuth } from './posterAuth';
 
 // -----------------------------------------------------------------------------
 
-const AddAreaSchema = z.object({
-    name: z.string(),
-});
-
-export type TAddAreaData = z.TypeOf<typeof AddAreaSchema>;
-
-const EditAreaSchema = z.object({
-    area_id: z.number(),
-    name: z.string().optional(),
-    disabled: z.boolean().optional(),
-});
-
-export type TEditAreaData = z.TypeOf<typeof EditAreaSchema>;
-
 const AddAffiliateSchema = z.object({
     name: z.string(),
     region_id: z.number(),
@@ -35,9 +21,76 @@ const EditAffiliateSchema = z.object({
 
 export type TEditAffiliateData = z.TypeOf<typeof EditAffiliateSchema>;
 
+const AddAreaSchema = z.object({
+    name: z.string(),
+    reader_area: z.number().optional(),
+    org_area: z.number().optional(),
+});
+
+export type TAddAreaData = z.TypeOf<typeof AddAreaSchema>;
+
+const EditAreaSchema = z.object({
+    area_id: z.number(),
+    name: z.string().optional(),
+    disabled: z.boolean().optional(),
+    reader_area: z.number().optional(),
+    org_area: z.number().optional(),
+
+});
+
+export type TEditAreaData = z.TypeOf<typeof EditAreaSchema>;
+
 const AddRegionSchema = z.object({
     name: z.string(),
 });
+
+const AddOrgSchema = z.object({
+    name: z.string(),
+    area_id: z.number().nullable().optional(),
+    role_civic: z.number().optional(),
+    role_donor: z.number().optional(),
+    role_network: z.number().optional(),
+    role_referrer: z.number().optional(),
+    role_supplier: z.number().optional(),
+    role_supporter: z.number().optional(),
+    role_venue: z.number().optional(),
+    role_volunteer: z.number().optional(),
+    reader_venue: z.number().optional(),
+    general_venue: z.number().optional(),
+    address: z.string().optional(),
+    description: z.string().optional(),
+    url: z.string().optional(),
+    status: z.string().optional(),
+    summary: z.string().optional(),
+    action: z.number().optional(),
+});
+
+export type TAddOrgData = z.TypeOf<typeof AddOrgSchema>;
+
+const EditOrgSchema = z.object({
+    org_id: z.number(),
+    name: z.string().optional(),
+    area_id: z.number().nullable().optional(),
+    role_civic: z.number().optional(),
+    role_donor: z.number().optional(),
+    role_network: z.number().optional(),
+    role_referrer: z.number().optional(),
+    role_supplier: z.number().optional(),
+    role_supporter: z.number().optional(),
+    role_venue: z.number().optional(),
+    role_volunteer: z.number().optional(),
+    reader_venue: z.number().optional(),
+    general_venue: z.number().optional(),
+    address: z.string().optional(),
+    description: z.string().optional(),
+    url: z.string().optional(),
+    status: z.string().optional(),
+    summary: z.string().optional(),
+    action: z.number().optional(),
+    disabled: z.number().optional(),
+});
+
+export type TEditOrgData = z.TypeOf<typeof EditOrgSchema>;
 
 export type TAddRegionData = z.TypeOf<typeof AddRegionSchema>;
 
@@ -75,6 +128,16 @@ export type TEditVenueData = z.TypeOf<typeof EditVenueSchema>;
 
 // -----------------------------------------------------------------------------
 
+export async function addAffiliate(data: TAddAffiliateData): Promise<IApiResponse> {
+    const url = `${apiBaseUrl}/org/add-affiliate`;
+    return posterAuth(url, data, AddAffiliateSchema);
+}
+
+export async function editAffiliate(data: TEditAffiliateData): Promise<IApiResponse> {
+    const url = `${apiBaseUrl}/org/edit-affiliate`;
+    return posterAuth(url, data, EditAffiliateSchema);
+}
+
 export async function addArea(data: TAddAreaData): Promise<IApiResponse> {
     const url = `${apiBaseUrl}/org/add-area`;
     return posterAuth(url, data, AddAreaSchema);
@@ -85,19 +148,14 @@ export async function editArea(data: TEditAreaData): Promise<IApiResponse> {
     return posterAuth(url, data, EditAreaSchema);
 }
 
-export async function addAffiliate(data: TAddAffiliateData): Promise<IApiResponse> {
-    const url = `${apiBaseUrl}/org/add-affiliate`;
-    return posterAuth(url, data, AddAffiliateSchema);
+export async function addOrg(data: TAddOrgData): Promise<IApiResponse> {
+    const url = `${apiBaseUrl}/org/add-org`;
+    return posterAuth(url, data, AddOrgSchema);
 }
 
-export async function addVenue(data: TAddVenueData): Promise<IApiResponse> {
-    const url = `${apiBaseUrl}/org/add-venue`;
-    return posterAuth(url, data, AddVenueSchema);
-}
-
-export async function editAffiliate(data: TEditAffiliateData): Promise<IApiResponse> {
-    const url = `${apiBaseUrl}/org/edit-affiliate`;
-    return posterAuth(url, data, EditAffiliateSchema);
+export async function editOrg(data: TEditOrgData): Promise<IApiResponse> {
+    const url = `${apiBaseUrl}/org/edit-org`;
+    return posterAuth(url, data, EditOrgSchema);
 }
 
 export async function addRegion(data: TAddRegionData): Promise<IApiResponse> {
@@ -108,6 +166,11 @@ export async function addRegion(data: TAddRegionData): Promise<IApiResponse> {
 export async function editRegion(data: TEditRegionData): Promise<IApiResponse> {
     const url = `${apiBaseUrl}/org/edit-region`;
     return posterAuth(url, data, EditRegionSchema);
+}
+
+export async function addVenue(data: TAddVenueData): Promise<IApiResponse> {
+    const url = `${apiBaseUrl}/org/add-venue`;
+    return posterAuth(url, data, AddVenueSchema);
 }
 
 export async function editVenue(data: TEditVenueData): Promise<IApiResponse> {

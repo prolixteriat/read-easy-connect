@@ -1,26 +1,7 @@
-CREATE DATABASE IF NOT EXISTS ReadEasyConnect;
+DROP DATABASE IF EXISTS `readeasyconnect`;
+CREATE DATABASE `readeasyconnect`;
 
-USE ReadEasyConnect;
-
-DROP TABLE IF EXISTS `audit`;
-DROP TABLE IF EXISTS `coaches`;
-DROP TABLE IF EXISTS `coordinators`;
-DROP TABLE IF EXISTS `lessons`;
-DROP TABLE IF EXISTS `loans`;
-DROP TABLE IF EXISTS `comments`;
-DROP TABLE IF EXISTS `coach_notes`;
-DROP TABLE IF EXISTS `reader_notes`;
-DROP TABLE IF EXISTS `reviews`;
-DROP TABLE IF EXISTS `login_attempts`;
-DROP TABLE IF EXISTS `managers`;
-DROP TABLE IF EXISTS `viewers`;
-DROP TABLE IF EXISTS `password_reset`;
-DROP TABLE IF EXISTS `readers`;
-DROP TABLE IF EXISTS `areas`;
-DROP TABLE IF EXISTS `venues`;
-DROP TABLE IF EXISTS `affiliates`;
-DROP TABLE IF EXISTS `regions`;
-DROP TABLE IF EXISTS `users`;
+USE `readeasyconnect`;
 
 CREATE TABLE `regions` (
 	`region_id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -36,9 +17,7 @@ CREATE TABLE `affiliates` (
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
 	`disabled` BOOLEAN NOT NULL DEFAULT FALSE,
 	
-	FOREIGN KEY (`region_id`) REFERENCES `regions`(`region_id`),
-
-	INDEX `idx_affiliates_region_id` (`region_id`)
+	FOREIGN KEY (`region_id`) REFERENCES `regions`(`region_id`)
 );
 
 CREATE TABLE `areas` (
@@ -47,34 +26,14 @@ CREATE TABLE `areas` (
 	`affiliate_id` INT NOT NULL,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
 	`disabled` BOOLEAN NOT NULL DEFAULT FALSE,
+	`reader_area` BOOLEAN NOT NULL DEFAULT FALSE,  
+	`org_area` BOOLEAN NOT NULL DEFAULT FALSE,
+	
+	CONSTRAINT at_least_one_true CHECK (`reader_area` OR `org_area`),
 	
 	FOREIGN KEY (`affiliate_id`) REFERENCES `affiliates`(`affiliate_id`),
 
-	UNIQUE KEY `unique_area_affiliate` (`name`, `affiliate_id`),
-
-	INDEX `idx_areas_affiliate_id` (`affiliate_id`)
-);
-
-CREATE TABLE `venues` (
-	`venue_id` INT AUTO_INCREMENT PRIMARY KEY,
-	`name` VARCHAR(255) NOT NULL,
-	`affiliate_id` INT NOT NULL,
-	-- personal data (encrypt)
-	`contact_name` VARCHAR(255),
-	`contact_email` VARCHAR(255),
-	`contact_telephone` VARCHAR(128),
-
-	-- non-personal data
-	`address` VARCHAR(512),
-	`notes` VARCHAR(1024),
-    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-	`disabled` BOOLEAN NOT NULL DEFAULT FALSE,
-	
-	FOREIGN KEY (`affiliate_id`) REFERENCES `affiliates`(`affiliate_id`),
-
-	UNIQUE KEY `unique_venue_affiliate` (`name`, `affiliate_id`),
-
-	INDEX `idx_venues_affiliate_id` (`affiliate_id`)
+	UNIQUE KEY `unique_area_affiliate` (`name`, `affiliate_id`)
 );
 
 CREATE TABLE `users` (
@@ -97,13 +56,105 @@ CREATE TABLE `users` (
 	INDEX `idx_users_role` (`role`)
 );
 
+CREATE TABLE `orgs` (
+	`org_id`  INT PRIMARY KEY AUTO_INCREMENT,
+	`name` VARCHAR(120),
+	`affiliate_id` INT NOT NULL,
+	`area_id` INT, 
+	`area_id_normalised` INT GENERATED ALWAYS AS (IFNULL(`area_id`, -1)) STORED,
+	`role_civic` BOOLEAN NOT NULL DEFAULT FALSE,     -- Civic / Elected Rep
+	`role_donor` BOOLEAN NOT NULL DEFAULT FALSE,     -- Donor
+	`role_network` BOOLEAN NOT NULL DEFAULT FALSE,   -- Network and Info Facilitation
+	`role_referrer` BOOLEAN NOT NULL DEFAULT FALSE,  -- Referrer / Potential Referrer
+	`role_supplier` BOOLEAN NOT NULL DEFAULT FALSE,  -- Supplier
+	`role_supporter` BOOLEAN NOT NULL DEFAULT FALSE, -- Supporter
+	`role_venue` BOOLEAN NOT NULL DEFAULT FALSE,     -- Venue      
+	`role_volunteer` BOOLEAN NOT NULL DEFAULT FALSE, -- Volunteer Source
+	`reader_venue` BOOLEAN NOT NULL DEFAULT FALSE,
+	`general_venue` BOOLEAN NOT NULL DEFAULT FALSE,
+	`address` VARCHAR(512),
+	`description` VARCHAR(512),
+	`url` VARCHAR(1024),
+	`status`  VARCHAR(512),
+	`summary`  VARCHAR(512),
+	`action` BOOLEAN NOT NULL DEFAULT FALSE,
+	`disabled` BOOLEAN NOT NULL DEFAULT FALSE,
+	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+	
+	CONSTRAINT `constraint_venue` CHECK (NOT `role_venue` OR (`reader_venue` OR `general_venue`)),
+	
+	FOREIGN KEY (`affiliate_id`) REFERENCES `affiliates`(`affiliate_id`),
+	FOREIGN KEY (`area_id`) REFERENCES `areas`(`area_id`),
+	
+	UNIQUE KEY `unique_orgs_affiliate_area` (`name`, `affiliate_id`, `area_id_normalised`)
+);
+
+CREATE TABLE `org_notes` (
+	`note_id` INT AUTO_INCREMENT PRIMARY KEY,
+	`about_id` INT NOT NULL,
+	`by_id` INT NOT NULL,
+	`note` VARCHAR(1024) NOT NULL,
+	`note_at` DATETIME NOT NULL,
+	`type` ENUM('civic', 'donor', 'network', 'referrer', 'supplier', 'supporter', 'venue', 'volunteer'),
+	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+	FOREIGN KEY (`about_id`) REFERENCES `orgs`(`org_id`),
+	FOREIGN KEY (`by_id`) REFERENCES `users`(`user_id`)
+);
+
+CREATE TABLE `contacts` (
+	`contact_id` INT AUTO_INCREMENT PRIMARY KEY,
+	`org_id`  INT NOT NULL,
+	`disabled` BOOLEAN NOT NULL DEFAULT FALSE,
+	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+	`marketing_consent` BOOLEAN NOT NULL DEFAULT FALSE,
+	`marketing_consent_at` DATETIME NULL,
+	`marketing_consent_source` VARCHAR(255) NULL,
+	-- personal data (encrypt)
+	`name` VARCHAR(255) NOT NULL,
+	`role` VARCHAR(255),
+	`email` VARCHAR(255),
+	`telephone` VARCHAR(128),
+	`notes` VARCHAR(1024),
+
+	FOREIGN KEY (`org_id`) REFERENCES `orgs`(`org_id`),
+
+	UNIQUE KEY `unique_contacts_name` (`org_id`, `name`)
+);
+
+CREATE TABLE `referrals` (
+	`referral_id` INT AUTO_INCREMENT PRIMARY KEY,
+	`org_id`  INT NOT NULL,
+	`contact_id` INT,
+	`by_id` INT NOT NULL,
+	`status` ENUM('new', 'pending', 'onhold', 'closed-successful', 'closed-withdrew', 'closed-unable') NOT NULL DEFAULT 'new',
+	`referral` VARCHAR(1024) NOT NULL,
+	`referral_at` DATETIME NOT NULL,
+	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+	FOREIGN KEY (`org_id`) REFERENCES `orgs`(`org_id`),
+	FOREIGN KEY (`contact_id`) REFERENCES `contacts`(`contact_id`),
+	FOREIGN KEY (`by_id`) REFERENCES `users`(`user_id`)
+);
+
+CREATE TABLE `referral_notes` (
+	`note_id` INT AUTO_INCREMENT PRIMARY KEY,
+	`about_id` INT NOT NULL,
+	`by_id` INT NOT NULL,
+	`note` VARCHAR(1024) NOT NULL,
+	`note_at` DATETIME NOT NULL,
+	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+	FOREIGN KEY (`about_id`) REFERENCES `referrals`(`referral_id`),
+	FOREIGN KEY (`by_id`) REFERENCES `users`(`user_id`)
+);
+
 CREATE TABLE `coaches` (
 	`coach_id` INT PRIMARY KEY,
 	`affiliate_id` INT NOT NULL,
 	`coordinator_id` INT,
 	`area_id` INT,
-	`status` ENUM('unchecked', 'untrained', 'trained', 'paired') 
-				NOT NULL DEFAULT 'unchecked',
+	`status` ENUM('unchecked', 'untrained', 'trained', 'paired') NOT NULL DEFAULT 'unchecked',
 	-- personal data (encrypt)
 	`address` VARCHAR(512),
 	`telephone` VARCHAR(128),
@@ -130,11 +181,7 @@ CREATE TABLE `coaches` (
 	FOREIGN KEY (`coach_id`) REFERENCES `users`(`user_id`),
 	FOREIGN KEY (`coordinator_id`) REFERENCES `users`(`user_id`),
 	FOREIGN KEY (`affiliate_id`) REFERENCES `affiliates`(`affiliate_id`),
-	FOREIGN KEY (`area_id`) REFERENCES `areas`(`area_id`),
-
-	INDEX `idx_coaches_affiliate_id` (`affiliate_id`),
-	INDEX `idx_coaches_area_id` (`area_id`),
-	INDEX `idx_coaches_coordinator_id` (`coordinator_id`)
+	FOREIGN KEY (`area_id`) REFERENCES `areas`(`area_id`)
 );
 
 CREATE TABLE `coordinators` (
@@ -142,19 +189,16 @@ CREATE TABLE `coordinators` (
 	`affiliate_id` INT NOT NULL,
 
 	FOREIGN KEY (`coordinator_id`) REFERENCES `users`(`user_id`),
-	FOREIGN KEY (`affiliate_id`) REFERENCES `affiliates`(`affiliate_id`),
-
-	INDEX `idx_coordinators_affiliate_id` (`affiliate_id`)
+	FOREIGN KEY (`affiliate_id`) REFERENCES `affiliates`(`affiliate_id`)
 );
 
 CREATE TABLE `readers` (
 	`reader_id` INT AUTO_INCREMENT PRIMARY KEY,
 	`name` VARCHAR(255) NOT NULL,	-- label - not real name
 	`affiliate_id` INT NOT NULL,
+	`referral_id` INT UNIQUE,
 	`area_id` INT,
 	`coach_id` INT,
-	`referrer_name` VARCHAR(255),
-	`referrer_org` VARCHAR(255),
 	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
 	`level` ENUM('TP1', 'TP2', 'TP3', 'TP4', 'TP5') NOT NULL DEFAULT 'TP1',
 	`status` ENUM('NYS', 'S', 'P', 'DO', 'G', 'C') NOT NULL DEFAULT 'NYS',
@@ -182,12 +226,56 @@ CREATE TABLE `readers` (
 	`ons4_2` BOOLEAN NOT NULL DEFAULT FALSE,
 	`ons4_3` BOOLEAN NOT NULL DEFAULT FALSE,
 	
-	FOREIGN KEY (`coach_id`) REFERENCES `users`(`user_id`),
 	FOREIGN KEY (`affiliate_id`) REFERENCES `affiliates`(`affiliate_id`),
 	FOREIGN KEY (`area_id`) REFERENCES `areas`(`area_id`),
+	FOREIGN KEY (`coach_id`) REFERENCES `users`(`user_id`),
+	FOREIGN KEY (`referral_id`) REFERENCES `referrals`(`referral_id`),
 	
-	UNIQUE KEY `unique_reader_affiliate` (`name`, `affiliate_id`)	
+	UNIQUE KEY `unique_reader_affiliate` (`name`, `affiliate_id`)
 );
+
+DELIMITER //
+CREATE TRIGGER set_level_before_insert
+BEFORE INSERT ON readers
+FOR EACH ROW
+BEGIN
+    IF NEW.TP5_start_at IS NOT NULL THEN
+        SET NEW.level = 'TP5';
+    ELSEIF NEW.TP4_start_at IS NOT NULL THEN
+        SET NEW.level = 'TP4';
+    ELSEIF NEW.TP3_start_at IS NOT NULL THEN
+        SET NEW.level = 'TP3';
+    ELSEIF NEW.TP2_start_at IS NOT NULL THEN
+        SET NEW.level = 'TP2';
+    ELSE
+        SET NEW.level = 'TP1';
+    END IF;
+END;
+//
+
+DELIMITER ;
+
+-- UPDATE trigger:
+DELIMITER //
+CREATE TRIGGER set_level_before_update
+BEFORE UPDATE ON readers
+FOR EACH ROW
+BEGIN
+    IF NEW.TP5_start_at IS NOT NULL THEN
+        SET NEW.level = 'TP5';
+    ELSEIF NEW.TP4_start_at IS NOT NULL THEN
+        SET NEW.level = 'TP4';
+    ELSEIF NEW.TP3_start_at IS NOT NULL THEN
+        SET NEW.level = 'TP3';
+    ELSEIF NEW.TP2_start_at IS NOT NULL THEN
+        SET NEW.level = 'TP2';
+    ELSE
+        SET NEW.level = 'TP1';
+    END IF;
+END;
+//
+
+DELIMITER ;
 
 CREATE TABLE `loans` (
 	`loan_id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -198,9 +286,7 @@ CREATE TABLE `loans` (
 	`status` ENUM('loaned', 'returned', 'lost') NOT NULL DEFAULT 'loaned',
 	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
 
-	FOREIGN KEY (`reader_id`) REFERENCES `readers`(`reader_id`),
-
-	INDEX `idx_loans_reader_id` (`reader_id`)
+	FOREIGN KEY (`reader_id`) REFERENCES `readers`(`reader_id`)
 );
 
 CREATE TABLE `comments` (
@@ -211,9 +297,7 @@ CREATE TABLE `comments` (
 	`quote_permission` BOOLEAN NOT NULL DEFAULT FALSE,
 	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
 
-	FOREIGN KEY (`reader_id`) REFERENCES `readers`(`reader_id`),
-
-	INDEX `idx_notes_reader_id` (`reader_id`)
+	FOREIGN KEY (`reader_id`) REFERENCES `readers`(`reader_id`)
 );
 
 CREATE TABLE `coach_notes` (
@@ -225,10 +309,7 @@ CREATE TABLE `coach_notes` (
 	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
 
 	FOREIGN KEY (`about_id`) REFERENCES `users`(`user_id`),
-	FOREIGN KEY (`by_id`) REFERENCES `users`(`user_id`),
-
-	INDEX `idx_coach_notes_about_id` (`about_id`),
-	INDEX `idx_coach_notes_by_id` (`by_id`)
+	FOREIGN KEY (`by_id`) REFERENCES `users`(`user_id`)
 );
 
 CREATE TABLE `reader_notes` (
@@ -240,12 +321,8 @@ CREATE TABLE `reader_notes` (
 	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
 
 	FOREIGN KEY (`about_id`) REFERENCES `readers`(`reader_id`),
-	FOREIGN KEY (`by_id`) REFERENCES `users`(`user_id`),
-
-	INDEX `idx_reader_notes_about_id` (`about_id`),
-	INDEX `idx_reader_notes_by_id` (`by_id`)
+	FOREIGN KEY (`by_id`) REFERENCES `users`(`user_id`)
 );
-
 
 CREATE TABLE `lessons` (
 	`lesson_id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -263,10 +340,7 @@ CREATE TABLE `lessons` (
 
 	FOREIGN KEY (`coach_id`) REFERENCES `users`(`user_id`),
 	FOREIGN KEY (`reader_id`) REFERENCES `readers`(`reader_id`),
-	FOREIGN KEY (`venue_id`) REFERENCES `venues`(`venue_id`),
-
-	INDEX `idx_lessons_coach_id` (`coach_id`),
-	INDEX `idx_lessons_reader_id` (`reader_id`)
+	FOREIGN KEY (`venue_id`) REFERENCES `orgs`(`org_id`)
 );
 
 CREATE TABLE `reviews` (
@@ -286,10 +360,7 @@ CREATE TABLE `reviews` (
 	FOREIGN KEY (`coordinator_id`) REFERENCES `users`(`user_id`),
 	FOREIGN KEY (`coach_id`) REFERENCES `users`(`user_id`),
 	FOREIGN KEY (`reader_id`) REFERENCES `readers`(`reader_id`),
-	FOREIGN KEY (`venue_id`) REFERENCES `venues`(`venue_id`),
-
-	INDEX `idx_lessons_coach_id` (`coach_id`),
-	INDEX `idx_lessons_reader_id` (`reader_id`)
+	FOREIGN KEY (`venue_id`) REFERENCES `orgs`(`org_id`)
 );
 
 CREATE TABLE `login_attempts` (
@@ -308,9 +379,7 @@ CREATE TABLE `managers` (
 	`affiliate_id` INT NOT NULL,
 
 	FOREIGN KEY (`manager_id`) REFERENCES `users`(`user_id`),
-	FOREIGN KEY (`affiliate_id`) REFERENCES `affiliates`(`affiliate_id`),
-
-	INDEX `idx_managers_affiliate_id` (`affiliate_id`)
+	FOREIGN KEY (`affiliate_id`) REFERENCES `affiliates`(`affiliate_id`)
 );
 
 CREATE TABLE `viewers` (
@@ -318,11 +387,9 @@ CREATE TABLE `viewers` (
 	`affiliate_id` INT NOT NULL,
 
 	FOREIGN KEY (`viewer_id`) REFERENCES `users`(`user_id`),
-	FOREIGN KEY (`affiliate_id`) REFERENCES `affiliates`(`affiliate_id`),
-
-	INDEX `idx_viewer_affiliate_id` (`affiliate_id`)
+	FOREIGN KEY (`affiliate_id`) REFERENCES `affiliates`(`affiliate_id`)
 );
-
+  
 CREATE TABLE `audit` (
 	`audit_id` INT AUTO_INCREMENT PRIMARY KEY,
     `affiliate_id` INT,
@@ -332,15 +399,15 @@ CREATE TABLE `audit` (
 				'coach_added', 'coach_edited', 'reader_added', 
 				'reader_edited', 'lesson_added', 'lesson_edited', 
 				'review_added',  'review_edited', 'status_change', 
-				'password_reset', 'other') NOT NULL,
+				'password_reset', 'other', 'admin', 'org_added', 
+				'org_edited', 'contact_added', 'contact_edited',
+				'referral_added', 'referral_edited') NOT NULL,    
     `description` VARCHAR(255) NOT NULL,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     
     FOREIGN KEY (`affiliate_id`) REFERENCES `affiliates`(`affiliate_id`),
     FOREIGN KEY (`performed_by_id`) REFERENCES `users`(`user_id`),
-    FOREIGN KEY (`performed_on_id`) REFERENCES `users`(`user_id`),
-
-	INDEX `idx_audit_affiliate_id` (`affiliate_id`)
+    FOREIGN KEY (`performed_on_id`) REFERENCES `users`(`user_id`)
 );
 
 CREATE TABLE `password_reset` (

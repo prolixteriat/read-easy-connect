@@ -8,7 +8,13 @@ import { JwtManager } from '@lib/jwtManager';
 
 // -----------------------------------------------------------------------------
 
-const getReviewsUrl = (): string => { return `${apiBaseUrl}/reviews/get-reviews`; }
+const getReviewsUrl = (startDate?: string, endDate?: string): string => {
+    const url = `${apiBaseUrl}/reviews/get-reviews`;
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    return `${url}?${params.toString()}`;
+}
 
 const getReviewsCoordinatorUrl = (coordinatorId: number, startDate?: string, endDate?: string): string => {
     const url = `${apiBaseUrl}/reviews/get-reviews-coordinator`;
@@ -52,9 +58,9 @@ export interface IuseReviews {
     mutate: KeyedMutator<TReviewsSchema> | undefined;
 }   
 
-export function useReviews(): IuseReviews {
+export function useReviews(startDate?: string, endDate?: string): IuseReviews {
     
-    const searchUrl = getReviewsUrl();
+    const searchUrl = getReviewsUrl(startDate, endDate);
     const token = new JwtManager().getToken();
     const { data, error, isLoading, mutate } = useSWR([searchUrl, token], 
         reviewsFetcher, { 

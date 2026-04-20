@@ -315,6 +315,8 @@ export default function ReviewsCalendar(): React.JSX.Element {
               </div>
               <div className='flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center'>
                 <select
+                  id='status-filter'
+                  name='status_filter'
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as TReviewStatus | 'all')}
                   className='px-2 py-1 border border-gray-300 rounded text-sm'

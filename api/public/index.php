@@ -59,11 +59,13 @@ $errorMiddleware->setDefaultErrorHandler($customErrorHandler);
 # Include API routes.
 
 require_once __DIR__ . '/../private/RouteCoaches.php';
+require_once __DIR__ . '/../private/RouteContacts.php';
 require_once __DIR__ . '/../private/RouteLoans.php';
 require_once __DIR__ . '/../private/RouteLessons.php';
 require_once __DIR__ . '/../private/RouteNotes.php';
 require_once __DIR__ . '/../private/RouteOrg.php';
 require_once __DIR__ . '/../private/RouteReaders.php';
+require_once __DIR__ . '/../private/RouteReferrals.php';
 require_once __DIR__ . '/../private/RouteReports.php';
 require_once __DIR__ . '/../private/RouteReviews.php';
 require_once __DIR__ . '/../private/RouteUsers.php';

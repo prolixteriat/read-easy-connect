@@ -12,6 +12,33 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 # ------------------------------------------------------------------------------
+# TODO: Admin function
+$app->post('/users/change-role', function (Request $request, Response $response) {
+
+    $response->getBody()->write('TODO');
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus(200);
+});
+# ------------------------------------------------------------------------------
+# TODO: Admin function
+$app->post('/users/change-email', function (Request $request, Response $response) {
+
+    $response->getBody()->write('TODO');
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus(200);
+});
+# ------------------------------------------------------------------------------
+# TODO: Admin function
+$app->post('/users/reset-mfa', function (Request $request, Response $response) {
+
+    $response->getBody()->write('TODO');
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus(200);
+});
+# ------------------------------------------------------------------------------
 
 $app->get('/', function (Request $request, Response $response) {
     $response->getBody()->write('404 Not Found');

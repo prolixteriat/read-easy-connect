@@ -19,7 +19,7 @@
     "types": ["vitest/globals"],
 
     /* Path mapping */
-    "baseUrl": ".",
+    "ignoreDeprecations": "5.0",
     "paths": {
       "@components/*": ["./src/components/*"],
       "@hooks/*": ["./src/hooks/*"],

@@ -46,7 +46,7 @@ interface TTableProps {
 }
 
 export function TTable({ data }: TTableProps): React.JSX.Element {
-  const tableState = useTableState({ id: 'first_name', desc: false });
+  const tableState = useTableState({ id: 'name', desc: false });
 
   const copyToClipboard = useCallback(async () => {
     if (!data || data.length === 0) return;
@@ -168,11 +168,14 @@ export function TTable({ data }: TTableProps): React.JSX.Element {
       >
         <div className='flex-1 mb-4'>
           <input
+            id='training-filter-input'
+            name='filter'
             type='text'
             placeholder='Filter...'
             className='w-full rounded-md border p-2 text-sm'
             value={tableState.globalFilter ?? ''}
             onChange={(e) => tableState.setGlobalFilter(e.target.value)}
+            autoComplete='off'
           />
         </div>
       </BaseTable>

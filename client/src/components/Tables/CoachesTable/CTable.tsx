@@ -10,6 +10,7 @@ import { useAreas } from '@hooks/useOrg';
 import { useCoachNotes } from '@hooks/useNotes';
 
 import { editCoach, addCoach } from '@lib/api/apiCoaches';
+import { addCoachNote, type TAddCoachNoteData } from '@lib/api/apiNotes';
 import { asString} from '@lib/helper';
 import { type TCoachStatus, type TUserStatus, type TTrainingStatus } from '@lib/types';
 
@@ -46,6 +47,14 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
   const [showLeaverConfirm, setShowLeaverConfirm] = useState(false);
   const [personalDataEdited, setPersonalDataEdited] = useState(false);
   const [addPersonalDataEdited, setAddPersonalDataEdited] = useState(false);
+  
+  const [isAddNoteOpen, setIsAddNoteOpen] = useState(false);
+  const [newNoteData, setNewNoteData] = useState({ 
+    note: '', 
+    note_at: new Date().toISOString().split('T')[0] 
+  });
+  const [isNoteSaving, setIsNoteSaving] = useState(false);
+  const [noteErrorMessage, setNoteErrorMessage] = useState('');
   
   const { data: usersData } = useUsers();
   const coordinators = usersData?.filter(user => user.role === 'coordinator' && user.status === 'active')
@@ -431,6 +440,50 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
     performSave();
   };
 
+  const handleAddNoteOpen = () => {
+    setNoteErrorMessage('');
+    setIsAddNoteOpen(true);
+  };
+
+  const handleAddNote = async () => {
+    if (!selectedRow || !newNoteData.note.trim() || !newNoteData.note_at.trim()) {
+      setNoteErrorMessage('Note content and date are required');
+      return;
+    }
+    
+    setIsNoteSaving(true);
+    setNoteErrorMessage('');
+    
+    try {
+      const noteData: TAddCoachNoteData = {
+        about_id: selectedRow.coach_id,
+        note: newNoteData.note,
+        note_at: newNoteData.note_at
+      };
+      
+      const result = await addCoachNote(noteData);
+      
+      if (result.success) {
+        setIsAddNoteOpen(false);
+        setNewNoteData({ note: '', note_at: new Date().toISOString().split('T')[0] });
+        setNoteErrorMessage('');
+        notesMutate?.();
+      } else {
+        setNoteErrorMessage(asString(result.message, 'An error occurred while adding note'));
+      }
+    } catch {
+      setNoteErrorMessage('An error occurred while adding note');
+    } finally {
+      setIsNoteSaving(false);
+    }
+  };
+
+  const handleAddNoteCancel = () => {
+    setIsAddNoteOpen(false);
+    setNewNoteData({ note: '', note_at: new Date().toISOString().split('T')[0] });
+    setNoteErrorMessage('');
+  };
+
   const handleAddCoach = async () => {
     if (!validateAddForm()) return;
     
@@ -542,6 +595,8 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
         <div className='flex flex-col sm:flex-row gap-2 mb-4'>
           <div className='flex-1 relative'>
             <input
+              id='coaches-filter-input'
+              name='filter'
               type='text'
               placeholder='Filter...'
               className='w-full rounded-md border p-2 text-sm pr-32'
@@ -549,8 +604,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
               onChange={(e) => tableState.setGlobalFilter(e.target.value)}
             />
             {setShowLeavers && (
-              <label className='absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1 text-xs'>
+              <label htmlFor='coaches-show-leavers-checkbox' className='absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1 text-xs'>
                 <input
+                  id='coaches-show-leavers-checkbox'
+                  name='showLeavers'
                   type='checkbox'
                   checked={showLeavers}
                   onChange={(e) => setShowLeavers(e.target.checked)}
@@ -600,7 +657,7 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                         : 'text-blue-100 hover:bg-white/[0.12] hover:text-white'
                     }`
                   }>
-                    Notes
+                    Notes ({notesData?.length || 0})
                   </Tab>
                 </TabList>
                 <TabPanels>
@@ -612,11 +669,14 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                   handleSave();
                 }}
                 className='space-y-3 max-h-96 overflow-y-auto pr-2'
+                autoComplete='off'
               >
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>First Name *</label>
+                    <label htmlFor='edit-first-name' className='block text-sm font-medium text-gray-700'>First Name *</label>
                     <input
+                      id='edit-first-name'
+                      name='firstName'
                       className={`w-full rounded-md border p-2 ${tableState.errors.first_name ? 'border-red-500' : ''}`}
                       value={selectedRow.first_name}
                       onChange={(e) => setSelectedRow({ ...selectedRow, first_name: e.target.value })}
@@ -624,8 +684,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                     {tableState.errors.first_name && <p className='text-red-500 text-xs mt-1'>{tableState.errors.first_name}</p>}
                   </div>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>Last Name *</label>
+                    <label htmlFor='edit-last-name' className='block text-sm font-medium text-gray-700'>Last Name *</label>
                     <input
+                      id='edit-last-name'
+                      name='lastName'
                       className={`w-full rounded-md border p-2 ${tableState.errors.last_name ? 'border-red-500' : ''}`}
                       value={selectedRow.last_name}
                       onChange={(e) => setSelectedRow({ ...selectedRow, last_name: e.target.value })}
@@ -636,8 +698,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                 
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>Coach Status</label>
+                    <label htmlFor='edit-coach-status' className='block text-sm font-medium text-gray-700'>Coach Status</label>
                     <select
+                      id='edit-coach-status'
+                      name='coachStatus'
                       className='w-full rounded-md border p-2'
                       value={selectedRow.status}
                       onChange={(e) => setSelectedRow({ ...selectedRow, status: e.target.value as TCoachStatus })}
@@ -649,8 +713,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                     </select>
                   </div>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>User Status</label>
+                    <label htmlFor='edit-user-status' className='block text-sm font-medium text-gray-700'>User Status</label>
                     <select
+                      id='edit-user-status'
+                      name='userStatus'
                       className='w-full rounded-md border p-2'
                       value={selectedRow.user_status}
                       onChange={(e) => setSelectedRow({ ...selectedRow, user_status: e.target.value as TUserStatus })}
@@ -666,8 +732,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
 
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>Coordinator</label>
+                    <label htmlFor='edit-coordinator' className='block text-sm font-medium text-gray-700'>Coordinator</label>
                     <select
+                      id='edit-coordinator'
+                      name='coordinator'
                       className='w-full rounded-md border p-2'
                       value={selectedRow.coordinator_id || 0}
                       onChange={(e) => setSelectedRow({ ...selectedRow, coordinator_id: Number(e.target.value) })}
@@ -681,8 +749,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                     </select>
                   </div>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>Area</label>
+                    <label htmlFor='edit-area' className='block text-sm font-medium text-gray-700'>Area</label>
                     <select
+                      id='edit-area'
+                      name='area'
                       className='w-full rounded-md border p-2'
                       value={selectedRow.area_id || 0}
                       onChange={(e) => setSelectedRow({ ...selectedRow, area_id: Number(e.target.value) })}
@@ -699,8 +769,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
 
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>Email Consent</label>
+                    <label htmlFor='edit-email-consent' className='block text-sm font-medium text-gray-700'>Email Consent</label>
                     <select
+                      id='edit-email-consent'
+                      name='emailConsent'
                       className={`w-full rounded-md border p-2 ${selectedRow.email_consent === 0 ? 'bg-red-100' : ''}`}
                       value={selectedRow.email_consent}
                       onChange={(e) => setSelectedRow({ ...selectedRow, email_consent: Number(e.target.value) })}
@@ -710,8 +782,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                     </select>
                   </div>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>WhatsApp Consent</label>
+                    <label htmlFor='edit-whatsapp-consent' className='block text-sm font-medium text-gray-700'>WhatsApp Consent</label>
                     <select
+                      id='edit-whatsapp-consent'
+                      name='whatsappConsent'
                       className={`w-full rounded-md border p-2 ${selectedRow.whatsapp_consent === 0 ? 'bg-red-100' : ''}`}
                       value={selectedRow.whatsapp_consent}
                       onChange={(e) => setSelectedRow({ ...selectedRow, whatsapp_consent: Number(e.target.value) })}
@@ -724,11 +798,13 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
 
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>
+                    <label htmlFor='edit-send-emails' className='block text-sm font-medium text-gray-700'>
                       Send System Emails
                       <HoverHelp text='Automatically send emails such as review meeting invitations and ONS survey reminders directly to the Coach' />
                     </label>
                     <select
+                      id='edit-send-emails'
+                      name='sendEmails'
                       className={`w-full rounded-md border p-2 ${selectedRow.use_email === 0 ? 'bg-red-100' : ''}`}
                       value={selectedRow.use_email}
                       onChange={(e) => setSelectedRow({ ...selectedRow, use_email: Number(e.target.value) })}
@@ -738,8 +814,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                     </select>
                   </div>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>DBS Completed</label>
+                    <label htmlFor='edit-dbs-completed' className='block text-sm font-medium text-gray-700'>DBS Completed</label>
                     <select
+                      id='edit-dbs-completed'
+                      name='dbsCompleted'
                       className={`w-full rounded-md border p-2 ${selectedRow.dbs_completed === 0 ? 'bg-red-100' : ''}`}
                       value={selectedRow.dbs_completed}
                       onChange={(e) => setSelectedRow({ ...selectedRow, dbs_completed: Number(e.target.value) })}
@@ -752,8 +830,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
 
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>References Completed</label>
+                    <label htmlFor='edit-ref-completed' className='block text-sm font-medium text-gray-700'>References Completed</label>
                     <select
+                      id='edit-ref-completed'
+                      name='refCompleted'
                       className={`w-full rounded-md border p-2 ${selectedRow.ref_completed === 0 ? 'bg-red-100' : ''}`}
                       value={selectedRow.ref_completed}
                       onChange={(e) => setSelectedRow({ ...selectedRow, ref_completed: Number(e.target.value) })}
@@ -763,8 +843,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                     </select>
                   </div>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>Commitment Completed</label>
+                    <label htmlFor='edit-commitment-completed' className='block text-sm font-medium text-gray-700'>Commitment Completed</label>
                     <select
+                      id='edit-commitment-completed'
+                      name='commitmentCompleted'
                       className={`w-full rounded-md border p-2 ${selectedRow.commitment_completed === 0 ? 'bg-red-100' : ''}`}
                       value={selectedRow.commitment_completed}
                       onChange={(e) => setSelectedRow({ ...selectedRow, commitment_completed: Number(e.target.value) })}
@@ -777,8 +859,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
 
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>Coach Training</label>
+                    <label htmlFor='edit-coach-training' className='block text-sm font-medium text-gray-700'>Coach Training</label>
                     <select
+                      id='edit-coach-training'
+                      name='coachTraining'
                       className={`w-full rounded-md border p-2 ${selectedRow.training === 'not_booked' ? 'bg-red-100' : selectedRow.training === 'booked' ? 'bg-yellow-100' : ''}`}
                       value={selectedRow.training}
                       onChange={(e) => setSelectedRow({ ...selectedRow, training: e.target.value as TTrainingStatus })}
@@ -789,8 +873,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                     </select>
                   </div>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>EDIB Training</label>
+                    <label htmlFor='edit-edib-training' className='block text-sm font-medium text-gray-700'>EDIB Training</label>
                     <select
+                      id='edit-edib-training'
+                      name='edibTraining'
                       className={`w-full rounded-md border p-2 ${selectedRow.edib_training === 'not_booked' ? 'bg-red-100' : selectedRow.edib_training === 'booked' ? 'bg-yellow-100' : ''}`}
                       value={selectedRow.edib_training}
                       onChange={(e) => setSelectedRow({ ...selectedRow, edib_training: e.target.value as TTrainingStatus })}
@@ -804,8 +890,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
 
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>Consolidation Training</label>
+                    <label htmlFor='edit-consol-training' className='block text-sm font-medium text-gray-700'>Consolidation Training</label>
                     <select
+                      id='edit-consol-training'
+                      name='consolTraining'
                       className={`w-full rounded-md border p-2 ${selectedRow.consol_training === 'not_booked' ? 'bg-red-100' : selectedRow.consol_training === 'booked' ? 'bg-yellow-100' : ''}`}
                       value={selectedRow.consol_training}
                       onChange={(e) => setSelectedRow({ ...selectedRow, consol_training: e.target.value as TTrainingStatus })}
@@ -816,8 +904,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                     </select>
                   </div>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700'>Consolidation Training Date</label>
+                    <label htmlFor='edit-consol-training-date' className='block text-sm font-medium text-gray-700'>Consolidation Training Date</label>
                     <input
+                      id='edit-consol-training-date'
+                      name='consolTrainingDate'
                       type='date'
                       className='w-full rounded-md border p-2'
                       value={selectedRow.consol_training_at ? selectedRow.consol_training_at.split('T')[0].split(' ')[0] : ''}
@@ -827,8 +917,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                 </div>
 
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Availability</label>
+                  <label htmlFor='edit-availability' className='block text-sm font-medium text-gray-700'>Availability</label>
                   <textarea
+                    id='edit-availability'
+                    name='availability'
                     className='w-full rounded-md border p-2'
                     rows={2}
                     value={selectedRow.availability || ''}
@@ -837,8 +929,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                 </div>
 
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Preferences</label>
+                  <label htmlFor='edit-preferences' className='block text-sm font-medium text-gray-700'>Preferences</label>
                   <textarea
+                    id='edit-preferences'
+                    name='preferences'
                     className='w-full rounded-md border p-2'
                     rows={2}
                     value={selectedRow.preferences || ''}
@@ -847,8 +941,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                 </div>
 
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Comments</label>
+                  <label htmlFor='edit-comments' className='block text-sm font-medium text-gray-700'>Comments</label>
                   <textarea
+                    id='edit-comments'
+                    name='comments'
                     className='w-full rounded-md border p-2'
                     rows={3}
                     value={selectedRow.notes || ''}
@@ -884,9 +980,14 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                       />
                     </div>
                     <div className='flex justify-between items-center mt-4'>
-                      <Button variant='secondary' type='button' onClick={handlePersonalDataOpen}>
-                        Personal Data
-                      </Button>
+                      <div className='flex gap-2'>
+                        <Button variant='secondary' type='button' onClick={handlePersonalDataOpen}>
+                          Personal Data
+                        </Button>
+                        <Button variant='primary' type='button' onClick={handleAddNoteOpen}>
+                          Add Note
+                        </Button>
+                      </div>
                       <div className='flex gap-2'>
                         <Button variant='secondary' type='button' onClick={handleCancel}>
                           Cancel
@@ -948,11 +1049,14 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                 handleAddCoach();
               }}
               className='space-y-3 max-h-96 overflow-y-auto pr-2'
+              autoComplete='off'
             >
               <div className='grid grid-cols-2 gap-3'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>First Name *</label>
+                  <label htmlFor='add-first-name' className='block text-sm font-medium text-gray-700'>First Name *</label>
                   <input
+                    id='add-first-name'
+                    name='firstName'
                     className={`w-full rounded-md border p-2 ${tableState.errors.first_name ? 'border-red-500' : ''}`}
                     value={newCoach.first_name}
                     onChange={(e) => setNewCoach({ ...newCoach, first_name: e.target.value })}
@@ -960,8 +1064,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                   {tableState.errors.first_name && <p className='text-red-500 text-xs mt-1'>{tableState.errors.first_name}</p>}
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Last Name *</label>
+                  <label htmlFor='add-last-name' className='block text-sm font-medium text-gray-700'>Last Name *</label>
                   <input
+                    id='add-last-name'
+                    name='lastName'
                     className={`w-full rounded-md border p-2 ${tableState.errors.last_name ? 'border-red-500' : ''}`}
                     value={newCoach.last_name}
                     onChange={(e) => setNewCoach({ ...newCoach, last_name: e.target.value })}
@@ -971,9 +1077,12 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Email *</label>
+                <label htmlFor='add-email' className='block text-sm font-medium text-gray-700'>Email *</label>
                 <input
+                  id='add-email'
+                  name='email'
                   type='email'
+                  autoComplete='off'
                   className={`w-full rounded-md border p-2 ${tableState.errors.email ? 'border-red-500' : ''}`}
                   value={newCoach.email}
                   onChange={(e) => setNewCoach({ ...newCoach, email: e.target.value })}
@@ -983,8 +1092,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
               
               <div className='grid grid-cols-2 gap-3'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Coach Status</label>
+                  <label htmlFor='add-coach-status' className='block text-sm font-medium text-gray-700'>Coach Status</label>
                   <select
+                    id='add-coach-status'
+                    name='coachStatus'
                     className='w-full rounded-md border p-2'
                     value={newCoach.status}
                     onChange={(e) => setNewCoach({ ...newCoach, status: e.target.value as TCoachStatus })}
@@ -996,8 +1107,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                   </select>
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>User Status</label>
+                  <label htmlFor='add-user-status' className='block text-sm font-medium text-gray-700'>User Status</label>
                   <select
+                    id='add-user-status'
+                    name='userStatus'
                     className='w-full rounded-md border p-2'
                     value={newCoach.user_status}
                     onChange={(e) => setNewCoach({ ...newCoach, user_status: e.target.value as TUserStatus })}
@@ -1013,8 +1126,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
 
               <div className='grid grid-cols-2 gap-3'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Coordinator</label>
+                  <label htmlFor='add-coordinator' className='block text-sm font-medium text-gray-700'>Coordinator</label>
                   <select
+                    id='add-coordinator'
+                    name='coordinator'
                     className='w-full rounded-md border p-2'
                     value={newCoach.coordinator_id}
                     onChange={(e) => setNewCoach({ ...newCoach, coordinator_id: Number(e.target.value) })}
@@ -1028,8 +1143,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                   </select>
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Area</label>
+                  <label htmlFor='add-area' className='block text-sm font-medium text-gray-700'>Area</label>
                   <select
+                    id='add-area'
+                    name='area'
                     className='w-full rounded-md border p-2'
                     value={newCoach.area_id}
                     onChange={(e) => setNewCoach({ ...newCoach, area_id: Number(e.target.value) })}
@@ -1046,8 +1163,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
 
               <div className='grid grid-cols-2 gap-3'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Email Consent</label>
+                  <label htmlFor='add-email-consent' className='block text-sm font-medium text-gray-700'>Email Consent</label>
                   <select
+                    id='add-email-consent'
+                    name='emailConsent'
                     className={`w-full rounded-md border p-2 ${newCoach.email_consent === 0 ? 'bg-red-100' : ''}`}
                     value={newCoach.email_consent}
                     onChange={(e) => setNewCoach({ ...newCoach, email_consent: Number(e.target.value) })}
@@ -1057,8 +1176,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                   </select>
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>WhatsApp Consent</label>
+                  <label htmlFor='add-whatsapp-consent' className='block text-sm font-medium text-gray-700'>WhatsApp Consent</label>
                   <select
+                    id='add-whatsapp-consent'
+                    name='whatsappConsent'
                     className={`w-full rounded-md border p-2 ${newCoach.whatsapp_consent === 0 ? 'bg-red-100' : ''}`}
                     value={newCoach.whatsapp_consent}
                     onChange={(e) => setNewCoach({ ...newCoach, whatsapp_consent: Number(e.target.value) })}
@@ -1071,11 +1192,13 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
 
               <div className='grid grid-cols-2 gap-3'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>
+                  <label htmlFor='add-send-emails' className='block text-sm font-medium text-gray-700'>
                     Send System Emails
                     <HoverHelp text='Automatically send emails such as review meeting invitations and ONS survey reminders directly to the Coach' />
                   </label>
                   <select
+                    id='add-send-emails'
+                    name='sendEmails'
                     className={`w-full rounded-md border p-2 ${newCoach.use_email === 0 ? 'bg-red-100' : ''}`}
                     value={newCoach.use_email}
                     onChange={(e) => setNewCoach({ ...newCoach, use_email: Number(e.target.value) })}
@@ -1085,8 +1208,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                   </select>
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>DBS Completed</label>
+                  <label htmlFor='add-dbs-completed' className='block text-sm font-medium text-gray-700'>DBS Completed</label>
                   <select
+                    id='add-dbs-completed'
+                    name='dbsCompleted'
                     className={`w-full rounded-md border p-2 ${newCoach.dbs_completed === 0 ? 'bg-red-100' : ''}`}
                     value={newCoach.dbs_completed}
                     onChange={(e) => setNewCoach({ ...newCoach, dbs_completed: Number(e.target.value) })}
@@ -1099,8 +1224,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
 
               <div className='grid grid-cols-2 gap-3'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>References Completed</label>
+                  <label htmlFor='add-ref-completed' className='block text-sm font-medium text-gray-700'>References Completed</label>
                   <select
+                    id='add-ref-completed'
+                    name='refCompleted'
                     className={`w-full rounded-md border p-2 ${newCoach.ref_completed === 0 ? 'bg-red-100' : ''}`}
                     value={newCoach.ref_completed}
                     onChange={(e) => setNewCoach({ ...newCoach, ref_completed: Number(e.target.value) })}
@@ -1110,8 +1237,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                   </select>
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Commitment Completed</label>
+                  <label htmlFor='add-commitment-completed' className='block text-sm font-medium text-gray-700'>Commitment Completed</label>
                   <select
+                    id='add-commitment-completed'
+                    name='commitmentCompleted'
                     className={`w-full rounded-md border p-2 ${newCoach.commitment_completed === 0 ? 'bg-red-100' : ''}`}
                     value={newCoach.commitment_completed}
                     onChange={(e) => setNewCoach({ ...newCoach, commitment_completed: Number(e.target.value) })}
@@ -1124,8 +1253,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
 
               <div className='grid grid-cols-2 gap-3'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Coach Training</label>
+                  <label htmlFor='add-coach-training' className='block text-sm font-medium text-gray-700'>Coach Training</label>
                   <select
+                    id='add-coach-training'
+                    name='coachTraining'
                     className={`w-full rounded-md border p-2 ${newCoach.training === 'not_booked' ? 'bg-red-100' : newCoach.training === 'booked' ? 'bg-yellow-100' : ''}`}
                     value={newCoach.training}
                     onChange={(e) => setNewCoach({ ...newCoach, training: e.target.value as TTrainingStatus })}
@@ -1136,8 +1267,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                   </select>
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>EDIB Training</label>
+                  <label htmlFor='add-edib-training' className='block text-sm font-medium text-gray-700'>EDIB Training</label>
                   <select
+                    id='add-edib-training'
+                    name='edibTraining'
                     className={`w-full rounded-md border p-2 ${newCoach.edib_training === 'not_booked' ? 'bg-red-100' : newCoach.edib_training === 'booked' ? 'bg-yellow-100' : ''}`}
                     value={newCoach.edib_training}
                     onChange={(e) => setNewCoach({ ...newCoach, edib_training: e.target.value as TTrainingStatus })}
@@ -1151,8 +1284,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
 
               <div className='grid grid-cols-2 gap-3'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Consolidation Training</label>
+                  <label htmlFor='add-consol-training' className='block text-sm font-medium text-gray-700'>Consolidation Training</label>
                   <select
+                    id='add-consol-training'
+                    name='consolTraining'
                     className={`w-full rounded-md border p-2 ${newCoach.consol_training === 'not_booked' ? 'bg-red-100' : newCoach.consol_training === 'booked' ? 'bg-yellow-100' : ''}`}
                     value={newCoach.consol_training}
                     onChange={(e) => setNewCoach({ ...newCoach, consol_training: e.target.value as TTrainingStatus })}
@@ -1163,8 +1298,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                   </select>
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Consolidation Training Date</label>
+                  <label htmlFor='add-consol-training-date' className='block text-sm font-medium text-gray-700'>Consolidation Training Date</label>
                   <input
+                    id='add-consol-training-date'
+                    name='consolTrainingDate'
                     type='date'
                     className='w-full rounded-md border p-2'
                     value={newCoach.consol_training_at}
@@ -1174,8 +1311,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Availability</label>
+                <label htmlFor='add-availability' className='block text-sm font-medium text-gray-700'>Availability</label>
                 <textarea
+                  id='add-availability'
+                  name='availability'
                   className='w-full rounded-md border p-2'
                   rows={2}
                   value={newCoach.availability}
@@ -1184,8 +1323,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Preferences</label>
+                <label htmlFor='add-preferences' className='block text-sm font-medium text-gray-700'>Preferences</label>
                 <textarea
+                  id='add-preferences'
+                  name='preferences'
                   className='w-full rounded-md border p-2'
                   rows={2}
                   value={newCoach.preferences}
@@ -1194,8 +1335,10 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Comments</label>
+                <label htmlFor='add-comments' className='block text-sm font-medium text-gray-700'>Comments</label>
                 <textarea
+                  id='add-comments'
+                  name='comments'
                   className='w-full rounded-md border p-2'
                   rows={3}
                   value={newCoach.notes}
@@ -1250,10 +1393,13 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                   handlePersonalDataSave();
                 }}
                 className='space-y-3'
+                autoComplete='off'
               >
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Address</label>
+                  <label htmlFor='edit-personal-address' className='block text-sm font-medium text-gray-700'>Address</label>
                   <textarea
+                    id='edit-personal-address'
+                    name='address'
                     className='w-full rounded-md border p-2'
                     rows={3}
                     value={personalData.address || ''}
@@ -1261,32 +1407,40 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                   />
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Telephone</label>
+                  <label htmlFor='edit-personal-telephone' className='block text-sm font-medium text-gray-700'>Telephone</label>
                   <input
+                    id='edit-personal-telephone'
+                    name='telephone'
                     className='w-full rounded-md border p-2'
                     value={personalData.telephone || ''}
                     onChange={(e) => setPersonalData({ ...personalData, telephone: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Next of Kin Name</label>
+                  <label htmlFor='edit-personal-nok-name' className='block text-sm font-medium text-gray-700'>Next of Kin Name</label>
                   <input
+                    id='edit-personal-nok-name'
+                    name='nokName'
                     className='w-full rounded-md border p-2'
                     value={personalData.nok_name || ''}
                     onChange={(e) => setPersonalData({ ...personalData, nok_name: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Next of Kin Telephone</label>
+                  <label htmlFor='edit-personal-nok-telephone' className='block text-sm font-medium text-gray-700'>Next of Kin Telephone</label>
                   <input
+                    id='edit-personal-nok-telephone'
+                    name='nokTelephone'
                     className='w-full rounded-md border p-2'
                     value={personalData.nok_telephone || ''}
                     onChange={(e) => setPersonalData({ ...personalData, nok_telephone: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700'>Next of Kin Relationship</label>
+                  <label htmlFor='edit-personal-nok-relationship' className='block text-sm font-medium text-gray-700'>Next of Kin Relationship</label>
                   <input
+                    id='edit-personal-nok-relationship'
+                    name='nokRelationship'
                     className='w-full rounded-md border p-2'
                     value={personalData.nok_relationship || ''}
                     onChange={(e) => setPersonalData({ ...personalData, nok_relationship: e.target.value })}
@@ -1326,10 +1480,13 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                 handleAddPersonalDataSave();
               }}
               className='space-y-3'
+              autoComplete='off'
             >
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Address</label>
+                <label htmlFor='add-personal-address' className='block text-sm font-medium text-gray-700'>Address</label>
                 <textarea
+                  id='add-personal-address'
+                  name='address'
                   className='w-full rounded-md border p-2'
                   rows={3}
                   value={newCoach.address}
@@ -1337,32 +1494,40 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Telephone</label>
+                <label htmlFor='add-personal-telephone' className='block text-sm font-medium text-gray-700'>Telephone</label>
                 <input
+                  id='add-personal-telephone'
+                  name='telephone'
                   className='w-full rounded-md border p-2'
                   value={newCoach.telephone}
                   onChange={(e) => setNewCoach({ ...newCoach, telephone: e.target.value })}
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Next of Kin Name</label>
+                <label htmlFor='add-personal-nok-name' className='block text-sm font-medium text-gray-700'>Next of Kin Name</label>
                 <input
+                  id='add-personal-nok-name'
+                  name='nokName'
                   className='w-full rounded-md border p-2'
                   value={newCoach.nok_name}
                   onChange={(e) => setNewCoach({ ...newCoach, nok_name: e.target.value })}
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Next of Kin Telephone</label>
+                <label htmlFor='add-personal-nok-telephone' className='block text-sm font-medium text-gray-700'>Next of Kin Telephone</label>
                 <input
+                  id='add-personal-nok-telephone'
+                  name='nokTelephone'
                   className='w-full rounded-md border p-2'
                   value={newCoach.nok_telephone}
                   onChange={(e) => setNewCoach({ ...newCoach, nok_telephone: e.target.value })}
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700'>Next of Kin Relationship</label>
+                <label htmlFor='add-personal-nok-relationship' className='block text-sm font-medium text-gray-700'>Next of Kin Relationship</label>
                 <input
+                  id='add-personal-nok-relationship'
+                  name='nokRelationship'
                   className='w-full rounded-md border p-2'
                   value={newCoach.nok_relationship}
                   onChange={(e) => setNewCoach({ ...newCoach, nok_relationship: e.target.value })}
@@ -1387,6 +1552,57 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
         title='Error'
         message={tableState.errorMessage}
       />
+
+      {/* Add Note Modal */}
+      <Dialog open={isAddNoteOpen} onClose={() => {}} className='relative z-[60]'>
+        <div className='fixed inset-0 bg-black/30' aria-hidden='true' />
+        <div className='fixed inset-0 flex items-center justify-center p-4'>
+          <DialogPanel className='w-full max-w-md rounded-xl bg-white p-6 shadow-lg'>
+            <div className='flex justify-between items-start mb-4'>
+              <DialogTitle className='text-lg font-semibold'>Add Note</DialogTitle>
+              <button onClick={handleAddNoteCancel}>
+                <X className='h-5 w-5 text-gray-500' />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Note *</label>
+                <textarea
+                  className='w-full rounded-md border p-2'
+                  rows={4}
+                  value={newNoteData.note}
+                  onChange={(e) => setNewNoteData({ ...newNoteData, note: e.target.value })}
+                  placeholder='Enter note...'
+                  required
+                />
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>Date *</label>
+                <input
+                  type='date'
+                  className='w-full rounded-md border p-2'
+                  value={newNoteData.note_at}
+                  onChange={(e) => setNewNoteData({ ...newNoteData, note_at: e.target.value })}
+                  required
+                />
+              </div>
+              {noteErrorMessage && (
+                <div className='text-red-600 text-sm bg-red-50 p-2 rounded'>{noteErrorMessage}</div>
+              )}
+              
+              <div className='flex justify-end gap-2 mt-4'>
+                <Button variant='secondary' onClick={handleAddNoteCancel}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAddNote} disabled={isNoteSaving}>
+                  {isNoteSaving ? 'Saving...' : 'Save'}
+                </Button>
+              </div>
+            </div>
+          </DialogPanel>
+        </div>
+      </Dialog>
 
       {tableState.isSaving && <Loading />}
     </>

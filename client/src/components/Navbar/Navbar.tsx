@@ -1,13 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Menu, X, ChevronDown, User } from 'lucide-react';
+import { Menu, X, ChevronDown, User, NotebookPen, ChevronRight, ChevronLeft } from 'lucide-react';
 
 import AppIcon from '../../assets/app-icon.ico';
 
 import { environment } from '@lib/config';
 import { useAuth } from '../../context/useAuth';
+import { useSidebar } from '../../context/useSidebar';
 import { roleRoutes } from '../../routes/roleRoutes';
-import { EditProfile, Login } from '@lib/lazy';
+import { EditProfile, Login, QuickNote } from '@lib/lazy';
 import { ConfirmDialog, Loading } from '@components/Common';
 import { logout } from '@lib/api/apiUsers';
 import { JwtManager } from '@lib/jwtManager';
@@ -16,6 +17,7 @@ import { JwtManager } from '@lib/jwtManager';
 
 export default function Navbar(): React.JSX.Element {
   const { role, setRole } = useAuth();
+  const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
   const navigate = useNavigate();
   const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(new Set());
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -24,8 +26,11 @@ export default function Navbar(): React.JSX.Element {
   const [loginOpen, setLoginOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [quickNoteOpen, setQuickNoteOpen] = useState(false);
+  const [prevScreenSize, setPrevScreenSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -35,14 +40,52 @@ export default function Navbar(): React.JSX.Element {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false);
       }
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node) && sidebarCollapsed) {
+        setSidebarCollapsed(true);
+      }
     };
 
-    if (mobileMenuOpen || userMenuOpen) {
+    if (mobileMenuOpen || userMenuOpen || !sidebarCollapsed) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [mobileMenuOpen, userMenuOpen]);
+  }, [mobileMenuOpen, userMenuOpen, sidebarCollapsed, setSidebarCollapsed]);
+
+  // Auto-collapse sidebar when transitioning from desktop to tablet
+  useEffect(() => {
+    const getScreenSize = (width: number): 'mobile' | 'tablet' | 'desktop' => {
+      if (width < 768) return 'mobile';
+      if (width < 1280) return 'tablet';
+      return 'desktop';
+    };
+
+    const handleResize = () => {
+      const width = window.innerWidth;
+      const currentScreenSize = getScreenSize(width);
+      
+      // Auto-collapse when transitioning FROM desktop TO tablet
+      if (prevScreenSize === 'desktop' && currentScreenSize === 'tablet') {
+        setSidebarCollapsed(true);
+      }
+      // Auto-expand when transitioning TO desktop
+      else if (currentScreenSize === 'desktop') {
+        setSidebarCollapsed(false);
+      }
+      
+      setPrevScreenSize(currentScreenSize);
+    };
+
+    window.addEventListener('resize', handleResize);
+    // Set initial screen size
+    const initialWidth = window.innerWidth;
+    setPrevScreenSize(getScreenSize(initialWidth));
+    if (getScreenSize(initialWidth) === 'tablet') {
+      setSidebarCollapsed(true);
+    }
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, [prevScreenSize, setSidebarCollapsed]);
 
 
 
@@ -75,7 +118,7 @@ export default function Navbar(): React.JSX.Element {
   };
 
   return (
-    <div>
+    <nav>
       {/* Top bar */}
       <div className='fixed top-0 left-0 w-full h-12 bg-gray-100 border-b border-gray-300 flex items-center justify-between px-4 z-50'>
         {/* App title with icon */}
@@ -89,15 +132,34 @@ export default function Navbar(): React.JSX.Element {
 
         {/* Top-right login/user menu */}
         <div className='flex items-center space-x-2'>
+          {role && (
+            <div className='relative group'>
+              <button
+                onClick={() => setQuickNoteOpen(true)}
+                className='flex items-center px-2 py-1 rounded hover:bg-gray-200'
+                aria-label='Quick Note'
+              >
+                <NotebookPen size={20} />
+              </button>
+              <div className='absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 text-xs text-black bg-white border border-black rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-500 pointer-events-none whitespace-nowrap'>
+                Add a quick note
+              </div>
+            </div>
+          )}
           {role ? (
             <div className='relative' ref={userMenuRef}>
-              <button
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className='flex items-center px-2 py-1 rounded hover:bg-gray-200'
-                aria-label='User'
-              >
-                <User size={20} />
-              </button>
+              <div className='relative group'>
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className='flex items-center px-2 py-1 rounded hover:bg-gray-200'
+                  aria-label='User'
+                >
+                  <User size={20} />
+                </button>
+                <div className='absolute top-full right-0 mt-2 px-2 py-1 text-xs text-black bg-white border border-black rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-500 pointer-events-none whitespace-nowrap'>
+                  Edit user profile and logout
+                </div>
+              </div>
               {userMenuOpen && (
                 <div className='absolute right-0 mt-2 w-36 bg-white border rounded shadow-lg z-50'>
                   <button
@@ -127,24 +189,55 @@ export default function Navbar(): React.JSX.Element {
             </button>
           )}
 
-          {/* Mobile burger / X icon */}
+          {/* Sidebar toggle for tablet and Mobile burger / X icon */}
           {role && (
-            <button
-              className='md:hidden ml-2 transition-transform duration-200'
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label='Toggle mobile menu'
-            >
-              <div className={`transition-transform duration-200 ${mobileMenuOpen ? 'rotate-90' : ''}`}>
-                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </div>
-            </button>
+            <>
+              <button
+                className='md:hidden ml-2 transition-transform duration-200'
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label='Toggle mobile menu'
+              >
+                <div className={`transition-transform duration-200 ${mobileMenuOpen ? 'rotate-90' : ''}`}>
+                  {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                </div>
+              </button>
+            </>
           )}
         </div>
       </div>
 
-      {/* Left-side vertical menu (desktop) */}
+      {/* Sidebar toggle for tablet mode */}
       {role && (
-        <div className='hidden md:block fixed top-12 left-0 h-[calc(100%-3rem)] w-56 bg-gray-50 border-r border-gray-300 overflow-auto pt-4'>
+        <>
+          <button
+            className='hidden md:block xl:hidden fixed top-12 left-0 z-40 bg-gray-100 border-r border-b border-gray-300 p-1 hover:bg-gray-200 transition-colors group'
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            aria-label='Toggle sidebar'
+            onMouseEnter={(e) => {
+              const tooltip = e.currentTarget.nextElementSibling as HTMLElement;
+              if (tooltip) tooltip.style.opacity = '1';
+            }}
+            onMouseLeave={(e) => {
+              const tooltip = e.currentTarget.nextElementSibling as HTMLElement;
+              if (tooltip) tooltip.style.opacity = '0';
+            }}
+          >
+            {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+          <div 
+            className='hidden md:block xl:hidden fixed top-12 left-8 z-50 px-2 py-1 text-xs text-black bg-white border border-black rounded opacity-0 transition-opacity duration-200 pointer-events-none whitespace-nowrap'
+            style={{ transitionDelay: '500ms' }}
+          >
+            {sidebarCollapsed ? 'Show menu' : 'Hide menu'}
+          </div>
+        </>
+      )}
+
+      {/* Left-side vertical menu (desktop and tablet) */}
+      {role && (
+        <aside ref={sidebarRef} className={`hidden md:block fixed top-12 left-0 h-[calc(100%-3rem)] w-56 bg-gray-50 border-r border-gray-300 overflow-auto pt-4 transition-transform duration-300 z-30 ${
+          sidebarCollapsed ? 'xl:translate-x-0 -translate-x-full' : 'translate-x-0'
+        }`} role='navigation' aria-label='Main navigation'>
           {roleRoutes[role].map((item, index) => (
             <div key={item.path}>
               {index > 0 && <hr className='mx-2 my-2 border-gray-300' />}
@@ -197,12 +290,19 @@ export default function Navbar(): React.JSX.Element {
               </div>
             </div>
           ))}
-        </div>
+        </aside>
+      )}
+
+      {/* QuickNote Modal */}
+      {role && (
+        <Suspense fallback={<Loading />}>
+          <QuickNote isOpen={quickNoteOpen} onClose={() => setQuickNoteOpen(false)} />
+        </Suspense>
       )}
 
       {/* Mobile menu dropdown */}
       {role && mobileMenuOpen && (
-        <div ref={mobileMenuRef} className='md:hidden fixed top-12 left-0 w-full bg-gray-50 border-b border-gray-300 pt-4 pb-4 z-40'>
+        <aside ref={mobileMenuRef} className='md:hidden fixed top-12 left-0 w-full bg-gray-50 border-b border-gray-300 pt-4 pb-4 z-40' role='navigation' aria-label='Mobile navigation'>
           {roleRoutes[role].map((item, index) => (
             <div key={item.path}>
               {index > 0 && <hr className='mx-4 my-2 border-gray-300' />}
@@ -256,18 +356,24 @@ export default function Navbar(): React.JSX.Element {
               </div>
             </div>
           ))}
-        </div>
+        </aside>
       )}
       
-      <EditProfile
-        isOpen={profileOpen}
-        onClose={() => setProfileOpen(false)}
-      />
+      {role && (
+        <Suspense fallback={<Loading />}>
+          <EditProfile
+            isOpen={profileOpen}
+            onClose={() => setProfileOpen(false)}
+          />
+        </Suspense>
+      )}
       
-      <Login
-        isOpen={loginOpen}
-        onClose={() => setLoginOpen(false)}
-      />
+      <Suspense fallback={<Loading />}>
+        <Login
+          isOpen={loginOpen}
+          onClose={() => setLoginOpen(false)}
+        />
+      </Suspense>
       
       <ConfirmDialog
         isOpen={showLogoutConfirm}
@@ -278,7 +384,7 @@ export default function Navbar(): React.JSX.Element {
       />
       
       {isLoggingOut && <Loading />}
-    </div>
+    </nav>
   );
 };
 // -----------------------------------------------------------------------------

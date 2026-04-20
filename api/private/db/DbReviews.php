@@ -107,7 +107,8 @@ class DbReviews extends DbBase {
             $status = new Status(true, 200, ['review_id' => $review_id]);
         } catch (Exception $e) {
             $this->logger->error('reviews_add: ' . $e->getMessage());
-            $status = new Status(false, 500, ['message' => 'Error occurred (reviews_add)']);
+            $status = new Status(false, 500, 
+                ['message' => 'Error occurred (reviews_add): ' . $e->getMessage()]);
         }
         return $status;
     }
@@ -208,7 +209,8 @@ class DbReviews extends DbBase {
             $status = new Status(true, 200, ['message' => 'Review updated successfully']);
         } catch (Exception $e) {
             $this->logger->error('reviews_edit: ' . $e->getMessage());
-            $status = new Status(false, 500, ['message' => 'Error occurred (reviews_edit)']);
+            $status = new Status(false, 500, 
+                ['message' => 'Error occurred (reviews_edit): ' . $e->getMessage()]);
         }
         return $status;
     }
@@ -266,20 +268,23 @@ class DbReviews extends DbBase {
             $status = new Status(true, 200, $reviews);
         } catch (Exception $e) {
             $this->logger->error('reviews_get_coordinator: ' . $e->getMessage());
-            $status = new Status(false, 500, ['message' => 'Error occurred (reviews_get_coordinator)']);
+            $status = new Status(false, 500, 
+                ['message' => 'Error occurred (reviews_get_coordinator): ' . $e->getMessage()]);
         }
         return $status;
     }
     # --------------------------------------------------------------------------
     # Role: manager, coordinator
     # Mandatory: n/a
-    # Optional : n/a
+    # Optional : start_date, end_date
     
     public function get_reviews(Request $request): Status {
         $status = $this->validate_token($request, ['manager', 'coordinator']);
         if (!$status->success) { 
             return $status; 
         }
+
+        $data = $this->sanitise_array($request->getQueryParams());
 
         try {
             $user_role = $this->role;
@@ -307,6 +312,15 @@ class DbReviews extends DbBase {
                 $params = [':user_id' => $user_id];
             }
             
+            if (isset($data['start_date'])) {
+                $query .= ' AND r.date >= :start';
+                $params[':start'] = $data['start_date'];
+            }
+            if (isset($data['end_date'])) {
+                $query .= ' AND DATE(r.date) <= :end';
+                $params[':end'] = $data['end_date'];
+            }
+            
             $query .= ' ORDER BY r.date DESC';
             
             $stmt = $this->conn->prepare($query);
@@ -316,7 +330,8 @@ class DbReviews extends DbBase {
             $status = new Status(true, 200, $reviews);
         } catch (Exception $e) {
             $this->logger->error('reviews_get_all: ' . $e->getMessage());
-            $status = new Status(false, 500, ['message' => 'Error occurred (reviews_get_all)']);
+            $status = new Status(false, 500, 
+                ['message' => 'Error occurred (reviews_get_all): ' . $e->getMessage()]);
         }
         return $status;        
     }
