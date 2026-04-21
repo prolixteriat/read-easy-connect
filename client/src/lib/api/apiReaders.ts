@@ -10,7 +10,7 @@ const EditReaderSchema = z.object({
     name: z.string().optional(),
     area_id: z.number().nullable().optional(),
     coach_id: z.number().nullable().optional(),
-    referral_id: z.number().nullable().optional(),
+    referral_id: z.number(),
     level: z.string().optional(),
     status: z.string().optional(),
     availability: z.string().nullable().optional(),
@@ -41,10 +41,9 @@ const EditReaderSchema = z.object({
 export type TEditReaderData = z.TypeOf<typeof EditReaderSchema>;
 
 const AddReaderSchema = z.object({
-    // name: z.string(),
     area_id: z.number().optional(),
     coach_id: z.number().optional(),
-    referral_id: z.number().nullable().optional(),
+    referral_id: z.number(),
     enrolment_at: z.string().nullable().optional(),
     availability: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),

@@ -350,13 +350,51 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
   };
 
   const validateAddForm = () => {
-    tableState.setErrors({});
-    return true;
+    const newErrors: Record<string, string> = {};
+    
+    // referral_id is now mandatory - must either select existing or create new
+    if (!newReader.referral_id && (!newReferralOrgId || !newReferralText || !newReferralDate)) {
+      newErrors.referral_required = 'Either select an existing enquiry or provide organisation, enquiry text, and date to create a new one';
+    }
+    
+    // If creating new referral, validate required fields
+    if (!newReader.referral_id) {
+      if (!newReferralOrgId) {
+        newErrors.referral_org = 'Organisation is required when creating a new enquiry';
+      }
+      if (!newReferralText.trim()) {
+        newErrors.referral_text = 'Enquiry text is required when creating a new enquiry';
+      }
+      if (!newReferralDate) {
+        newErrors.referral_date = 'Date is required when creating a new enquiry';
+      }
+    }
+    
+    tableState.setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const validateEditForm = () => {
     const newErrors: Record<string, string> = {};
     if (selectedRow && !selectedRow.name.trim()) newErrors.name = 'Name is required';
+    
+    // referral_id is now mandatory - must either have existing or create new
+    if (selectedRow && !selectedRow.referral_id && (!selectedReferralOrgId || !selectedReferralText || !selectedReferralDate)) {
+      newErrors.referral_required = 'Either select an existing enquiry or provide organisation, enquiry text, and date to create a new one';
+    }
+    
+    // If creating new referral, validate required fields
+    if (selectedRow && !selectedRow.referral_id) {
+      if (!selectedReferralOrgId) {
+        newErrors.referral_org = 'Organisation is required when creating a new enquiry';
+      }
+      if (!selectedReferralText.trim()) {
+        newErrors.referral_text = 'Enquiry text is required when creating a new enquiry';
+      }
+      if (!selectedReferralDate) {
+        newErrors.referral_date_required = 'Date is required when creating a new enquiry';
+      }
+    }
     
     // Enquiry date validation - must be <= enrolment date if both exist
     if (selectedRow && selectedRow.enrolment_at && selectedReferralDate) {
@@ -394,43 +432,43 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
         newErrors.TP1_start_at = 'TP1 start date must be on or after coaching start date';
       }
       
-      // TP1: start < completion and start required if completion provided
+      // TP1: start <= completion and start required if completion provided
       if (tp1Completion && !tp1Start) {
         newErrors.TP1_start_at = 'TP1 start date cannot be null if TP1 completion is provided';
       }
-      if (tp1Start && tp1Completion && tp1Start >= tp1Completion) {
+      if (tp1Start && tp1Completion && tp1Start > tp1Completion) {
         newErrors.TP1_completion_at = 'Completion date for TP1 cannot be before it has started';
       }
       
-      // TP2: start < completion and start required if completion provided
+      // TP2: start <= completion and start required if completion provided
       if (tp2Completion && !tp2Start) {
         newErrors.TP2_start_at = 'TP2 start date cannot be null if TP2 completion is provided';
       }
-      if (tp2Start && tp2Completion && tp2Start >= tp2Completion) {
+      if (tp2Start && tp2Completion && tp2Start > tp2Completion) {
         newErrors.TP2_completion_at = 'Completion date for TP2 cannot be before it has started';
       }
       
-      // TP3: start < completion and start required if completion provided
+      // TP3: start <= completion and start required if completion provided
       if (tp3Completion && !tp3Start) {
         newErrors.TP3_start_at = 'TP3 start date cannot be null if TP3 completion is provided';
       }
-      if (tp3Start && tp3Completion && tp3Start >= tp3Completion) {
+      if (tp3Start && tp3Completion && tp3Start > tp3Completion) {
         newErrors.TP3_completion_at = 'Completion date for TP3 cannot be before it has started';
       }
       
-      // TP4: start < completion and start required if completion provided
+      // TP4: start <= completion and start required if completion provided
       if (tp4Completion && !tp4Start) {
         newErrors.TP4_start_at = 'TP4 start date cannot be null if TP4 completion is provided';
       }
-      if (tp4Start && tp4Completion && tp4Start >= tp4Completion) {
+      if (tp4Start && tp4Completion && tp4Start > tp4Completion) {
         newErrors.TP4_completion_at = 'Completion date for TP4 cannot be before it has started';
       }
       
-      // TP5: start < completion and start required if completion provided
+      // TP5: start <= completion and start required if completion provided
       if (tp5Completion && !tp5Start) {
         newErrors.TP5_start_at = 'TP5 start date cannot be null if TP5 completion is provided';
       }
-      if (tp5Start && tp5Completion && tp5Start >= tp5Completion) {
+      if (tp5Start && tp5Completion && tp5Start > tp5Completion) {
         newErrors.TP5_completion_at = 'Completion date for TP5 cannot be before it has started';
       }
       
@@ -478,11 +516,12 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
     if (selectedRow) {
       tableState.setIsSaving(true);
       
-      // Handle referral operations first
-      let referralResult;
+      let finalReferralId = selectedRow.referral_id;
+      
+      // Handle referral operations - since referral_id is mandatory, we must ensure we have one
       if (selectedRow.referral_id) {
         // Edit existing referral
-        referralResult = await editReferral({
+        const referralResult = await editReferral({
           referral_id: selectedRow.referral_id,
           org_id: selectedReferralOrgId,
           contact_id: selectedReferralContactId,
@@ -491,9 +530,16 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
           referral: selectedReferralText,
           referral_at: selectedReferralDate,
         });
-      } else if (selectedReferralOrgId && selectedReferralText && selectedReferralDate) {
-        // Add new referral
-        referralResult = await addReferral({
+        
+        if (!referralResult.success) {
+          tableState.setIsSaving(false);
+          tableState.setErrorMessage(asString(referralResult.message, 'An error occurred while saving referral'));
+          tableState.setShowError(true);
+          return;
+        }
+      } else {
+        // Create new referral - this is now required since referral_id is mandatory
+        const referralResult = await addReferral({
           org_id: selectedReferralOrgId,
           contact_id: selectedReferralContactId,
           by_id: 1, // TODO: Get actual user ID
@@ -502,24 +548,30 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
           referral_at: selectedReferralDate,
         });
         
-        // If referral was created successfully, update the reader with the new referral_id
         if (referralResult.success && referralResult.message && typeof referralResult.message === 'object') {
           const responseData = referralResult.message as { referral_id?: number };
           if (responseData.referral_id) {
-            selectedRow.referral_id = responseData.referral_id;
+            finalReferralId = responseData.referral_id;
+            selectedRow.referral_id = finalReferralId;
           }
+        }
+        
+        if (!referralResult.success || !finalReferralId) {
+          tableState.setIsSaving(false);
+          tableState.setErrorMessage(asString(referralResult?.message, 'An error occurred while creating the required referral'));
+          tableState.setShowError(true);
+          return;
         }
       }
       
-      // If referral operation failed, show error and stop
-      if (referralResult && !referralResult.success) {
+      // Now save the reader - referral_id is guaranteed to exist
+      if (!finalReferralId) {
         tableState.setIsSaving(false);
-        tableState.setErrorMessage(asString(referralResult.message, 'An error occurred while saving referral'));
+        tableState.setErrorMessage('A referral ID is required but could not be obtained');
         tableState.setShowError(true);
         return;
       }
       
-      // Now save the reader
       const result = await editReader({
         reader_id: selectedRow.reader_id,
         name: selectedRow.name,
@@ -527,7 +579,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
         coach_id: selectedRow.coach_id || null,
         level: selectedRow.level,
         status: selectedRow.status,
-        referral_id: selectedRow.referral_id || undefined,
+        referral_id: finalReferralId, // This is now guaranteed to be a number
         availability: selectedRow.availability || undefined,
         notes: selectedRow.notes || undefined,
         enrolment_at: selectedRow.enrolment_at,
@@ -574,9 +626,9 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
     
     let referralId = newReader.referral_id;
     
-    // Handle referral operations first if new referral data is provided
-    if (!referralId && newReferralOrgId && newReferralText && newReferralDate) {
-      // Add new referral
+    // Since referral_id is mandatory, we must either have an existing one or create a new one
+    if (!referralId) {
+      // Create new referral - this is now required
       const referralResult = await addReferral({
         org_id: newReferralOrgId,
         contact_id: newReferralContactId,
@@ -586,25 +638,27 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
         referral_at: newReferralDate,
       });
       
-      // If referral was created successfully, use the new referral_id
       if (referralResult.success && referralResult.message && typeof referralResult.message === 'object') {
         const responseData = referralResult.message as { referral_id?: number };
         if (responseData.referral_id) {
           referralId = responseData.referral_id;
         }
-      } else if (!referralResult.success) {
+      }
+      
+      if (!referralResult.success || !referralId) {
         tableState.setIsSaving(false);
-        tableState.setErrorMessage(asString(referralResult.message, 'An error occurred while saving referral'));
+        tableState.setErrorMessage(asString(referralResult?.message, 'An error occurred while creating the required referral'));
         tableState.setShowError(true);
         return;
       }
     }
     
+    // referralId is now guaranteed to exist
     const result = await addReader({
       area_id: newReader.area_id || undefined,
       coach_id: newReader.coach_id || undefined,
       enrolment_at: newReader.enrolment_at || undefined,
-      referral_id: referralId || undefined,
+      referral_id: referralId, // This is now mandatory
       availability: newReader.availability || undefined,
       notes: newReader.notes || undefined,
     });
@@ -1366,6 +1420,17 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
               </TabList>
               <TabPanels>
                 <TabPanel>
+                  {/* Error Summary */}
+                  {Object.keys(tableState.errors).length > 0 && (
+                    <div className='mb-4 p-3 bg-red-50 border border-red-200 rounded-md'>
+                      <h4 className='text-sm font-medium text-red-800 mb-2'>Please correct the following errors:</h4>
+                      <ul className='text-sm text-red-700 space-y-1'>
+                        {Object.entries(tableState.errors).map(([field, error]) => (
+                          <li key={field}>• {error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -1471,6 +1536,17 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                   </form>
                 </TabPanel>
                 <TabPanel>
+                  {/* Error Summary */}
+                  {Object.keys(tableState.errors).length > 0 && (
+                    <div className='mb-4 p-3 bg-red-50 border border-red-200 rounded-md'>
+                      <h4 className='text-sm font-medium text-red-800 mb-2'>Please correct the following errors:</h4>
+                      <ul className='text-sm text-red-700 space-y-1'>
+                        {Object.entries(tableState.errors).map(([field, error]) => (
+                          <li key={field}>• {error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();

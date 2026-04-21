@@ -1,7 +1,7 @@
-DROP DATABASE IF EXISTS `readeasyconnect`;
-CREATE DATABASE `readeasyconnect`;
+DROP DATABASE IF EXISTS `readeasyconnect_v2`;
+CREATE DATABASE `readeasyconnect_v2`;
 
-USE `readeasyconnect`;
+USE `readeasyconnect_v2`;
 
 CREATE TABLE `regions` (
 	`region_id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -196,7 +196,7 @@ CREATE TABLE `readers` (
 	`reader_id` INT AUTO_INCREMENT PRIMARY KEY,
 	`name` VARCHAR(255) NOT NULL,	-- label - not real name
 	`affiliate_id` INT NOT NULL,
-	`referral_id` INT UNIQUE,
+	`referral_id` INT UNIQUE NOT NULL,
 	`area_id` INT,
 	`coach_id` INT,
 	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,

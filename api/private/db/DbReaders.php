@@ -17,8 +17,8 @@ class DbReaders extends DbBase {
     # Methods
     # --------------------------------------------------------------------------
     # Role: manager, coordinator
-    # Mandatory: n/a
-    # Optional : referral_id, area_id, coach_id, status, availability, notes, enrolment_at, 
+    # Mandatory: referral_id
+    # Optional : area_id, coach_id, status, availability, notes, enrolment_at, 
     #   coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, 
     #   TP4_start_at, TP5_start_at, TP1_completion_at, TP2_completion_at, 
     #   TP3_completion_at, TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3
@@ -30,6 +30,11 @@ class DbReaders extends DbBase {
                 return $status; 
             }
             $params = $this->sanitise_array($request->getParsedBody());
+            $required_params = ['referral_id'];
+            $status = $this->validate_params($params, $required_params);
+            if (!$status->success) { 
+                return $status; 
+            }
             
             $name = $this->create_reader_name();
             # Validate coach_id if provided
@@ -70,7 +75,7 @@ class DbReaders extends DbBase {
             $stmt->execute([
                 ':name'               => $name,
                 ':affiliate_id'       => $user_affiliate,
-                ':referral_id'        => $params['referral_id'] ?? null,
+                ':referral_id'        => $params['referral_id'],
                 ':area_id'            => $params['area_id'] ?? null,
                 ':coach_id'           => $params['coach_id'] ?? null,
                 ':status'             => $params['status'] ?? 'NYS',
@@ -117,8 +122,8 @@ class DbReaders extends DbBase {
     }
     # --------------------------------------------------------------------------
     # Role: manager, coordinator
-    # Mandatory: reader_id
-    # Optional : referral_id, area_id, coach_id, status, availability, notes, enrolment_at, coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, TP5_start_at, TP1_completion_at, TP2_completion_at, TP3_completion_at, TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3 
+    # Mandatory: reader_id, referral_id
+    # Optional : area_id, coach_id, status, availability, notes, enrolment_at, coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, TP5_start_at, TP1_completion_at, TP2_completion_at, TP3_completion_at, TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3 
 
     public function edit_reader(Request $request): Status {
         try {
@@ -127,7 +132,7 @@ class DbReaders extends DbBase {
                 return $status; 
             }
             $params = $this->sanitise_array($request->getParsedBody());
-            $required_params = ['reader_id'];
+            $required_params = ['reader_id', 'referral_id'];
             $status = $this->validate_params($params, $required_params);
             if (!$status->success) { 
                 return $status; 
@@ -165,7 +170,7 @@ class DbReaders extends DbBase {
 
             $name = $result['name'];
             $affiliate_id = $result['affiliate_id'];
-            $referral_id = array_key_exists('referral_id', $params) ? $params['referral_id'] : $result['referral_id'];
+            $referral_id = $params['referral_id'];
             $area_id = array_key_exists('area_id', $params) ? $params['area_id'] : $result['area_id'];
             $coach_id = array_key_exists('coach_id', $params) ? $params['coach_id'] : $result['coach_id'];
             $reader_status = $params['status'] ?? $result['status'];
