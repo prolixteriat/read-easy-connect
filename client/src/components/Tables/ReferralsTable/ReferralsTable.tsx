@@ -15,7 +15,7 @@ export default function ReferralsTable(): React.JSX.Element {
   const userRole = jwtManager.getRole();
 
   if (isLoading) return <Loading />;
-  if (error) return <div>Error loading referrals</div>;
+  if (error) return <div>Error loading enquiries: {error.message}</div>;
   if (!data) return <div>No referrals found</div>;
 
   const handleSave = () => {

@@ -181,17 +181,7 @@ const roleSpecificRoutes: Record<string, RouteItem[]> = {
     },
   ],
 
-  viewer: [
-    {
-      path: '/people',
-      label: 'People',
-      element: <div>Viewer People</div>,
-      children: [
-        { path: '/people/enquiries', label: 'Enquiries', 
-          element: <Suspense fallback={<Loading />}><ReferralsTable /></Suspense> },
-      ],
-    },
-    
+  viewer: [    
     {
       path: '/places',
       label: 'Places',

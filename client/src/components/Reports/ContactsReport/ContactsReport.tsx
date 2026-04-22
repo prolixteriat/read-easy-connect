@@ -9,7 +9,7 @@ export default function ContactsReport(): React.JSX.Element {
   const { data, error, isLoading } = useOrgs();
 
   if (isLoading) return <Loading />;
-  if (error) return <div>Error loading organisations</div>;
+  if (error) return <div>Error loading organisations: {error.message}</div>;
   if (!data) return <div>No organizations found</div>;
 
   return (
