@@ -234,20 +234,20 @@ export default function EnquiryTable({ data, error }: EnquiryTableProps): React.
     {
       accessorKey: 'area_name',
       header: () => (
-        <button className='flex items-center'>
+        <button className='flex items-center ml-6'>
           Area <ArrowUpDown className='ml-1 h-4 w-4' />
         </button>
       ),
       cell: ({ getValue, row }) => {
         const data = row.original as EnquiryRowData;
         const isSummary = data.isSummary;
-        return isSummary ? (getValue() as string) : <span className='ml-6'>{getValue() as string}</span>;
+        return isSummary ? <span className='ml-6 text-left'>{getValue() as string}</span> : <span className='ml-6 text-left'>{getValue() as string}</span>;
       },
     },
     {
       accessorKey: 'referral_date',
       header: () => (
-        <button className='flex items-center'>
+        <button className='flex items-center ml-6'>
           Date <ArrowUpDown className='ml-1 h-4 w-4' />
         </button>
       ),
@@ -255,7 +255,7 @@ export default function EnquiryTable({ data, error }: EnquiryTableProps): React.
         const data = row.original as EnquiryRowData;
         const isSummary = data.isSummary;
         const dateValue = getValue() as string;
-        return isSummary ? '' : <span className='ml-6'>{dateValue}</span>;
+        return isSummary ? <span className='ml-6 text-left'></span> : <span className='ml-6 text-left'>{dateValue}</span>;
       },
     },
     {
@@ -296,9 +296,14 @@ export default function EnquiryTable({ data, error }: EnquiryTableProps): React.
     {
       accessorKey: 'count',
       header: () => (
-        <button className='flex items-center'>
+        <button className='flex items-center justify-center w-full'>
           Count <ArrowUpDown className='ml-1 h-4 w-4' />
         </button>
+      ),
+      cell: ({ getValue }) => (
+        <div className='text-center'>
+          {getValue() as number}
+        </div>
       ),
     },
   ];

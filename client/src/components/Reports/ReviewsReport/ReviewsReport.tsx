@@ -196,9 +196,9 @@ export default function ReviewsReport(): React.JSX.Element {
       </div>
 
       {/* Desktop Table View */}
-      <div className='hidden md:block overflow-x-auto rounded-lg border shadow-sm'>
+      <div className='hidden md:block overflow-x-auto rounded-lg border shadow-sm max-h-[65vh] overflow-y-auto'>
         <table className='min-w-full divide-y divide-gray-200'>
-          <thead className='bg-gray-100'>
+          <thead className='bg-gray-100 sticky top-0 z-10'>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
