@@ -82,7 +82,7 @@ class DbReferrals extends DbBase {
     # --------------------------------------------------------------------------
     # Role: manager, coordinator
     # Mandatory: referral_id
-    # Optional: contact_id, status, referral, referral_at
+    # Optional: org_id, contact_id, status, referral, referral_at
 
     public function edit_referral(Request $request): Status {
         try {
@@ -118,15 +118,27 @@ class DbReferrals extends DbBase {
                 return new Status(false, 403, ['message' => 'Access denied to this referral']);
             }
 
+            $org_id = $result['org_id'];
+            if (isset($params['org_id'])) {
+                if (!is_numeric($params['org_id']) || $params['org_id'] <= 0) {
+                    return new Status(false, 400, ['message' => 'Invalid org_id']);
+                }
+                $org_id = (int)$params['org_id'];
+                if (!$this->has_org_access($org_id)) {
+                    return new Status(false, 403, ['message' => 'Access denied to this organization']);
+                }
+            }
+
             $contact_id = array_key_exists('contact_id', $params) ? $params['contact_id'] : $result['contact_id'];
             $status_val = $params['status'] ?? $result['status'];
             $referral = $params['referral'] ?? $result['referral'];
             $referral_at = $params['referral_at'] ?? $result['referral_at'];
 
-            $sql = 'UPDATE referrals SET contact_id = :contact_id, status = :status, referral = :referral, 
+            $sql = 'UPDATE referrals SET org_id = :org_id, contact_id = :contact_id, status = :status, referral = :referral, 
                     referral_at = :referral_at WHERE referral_id = :referral_id';
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([
+                ':org_id'       => $org_id,
                 ':contact_id'   => $contact_id,
                 ':status'       => $status_val,
                 ':referral'     => $referral,

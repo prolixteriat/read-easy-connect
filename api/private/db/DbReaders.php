@@ -123,7 +123,10 @@ class DbReaders extends DbBase {
     # --------------------------------------------------------------------------
     # Role: manager, coordinator
     # Mandatory: reader_id, referral_id
-    # Optional : area_id, coach_id, status, availability, notes, enrolment_at, coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, TP5_start_at, TP1_completion_at, TP2_completion_at, TP3_completion_at, TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3 
+    # Optional : area_id, coach_id, status, availability, notes, enrolment_at, 
+    # coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, 
+    # TP4_start_at, TP5_start_at, TP1_completion_at, TP2_completion_at, TP3_completion_at, 
+    # TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3 
 
     public function edit_reader(Request $request): Status {
         try {
