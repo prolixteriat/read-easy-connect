@@ -354,19 +354,19 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
     
     // referral_id is now mandatory - must either select existing or create new
     if (!newReader.referral_id && (!newReferralOrgId || !newReferralText || !newReferralDate)) {
-      newErrors.referral_required = 'Either select an existing enquiry or provide organisation, enquiry text, and date to create a new one';
-    }
-    
-    // If creating new referral, validate required fields
-    if (!newReader.referral_id) {
-      if (!newReferralOrgId) {
-        newErrors.referral_org = 'Organisation is required when creating a new enquiry';
-      }
-      if (!newReferralText.trim()) {
-        newErrors.referral_text = 'Enquiry text is required when creating a new enquiry';
-      }
-      if (!newReferralDate) {
-        newErrors.referral_date = 'Date is required when creating a new enquiry';
+      newErrors.referral_required = "Please click on the 'Enquiry' tab and either select an existing enquiry, or add organisation, enquiry text and date to create a new one. If it is a self referral or referral by friends/family, please select 'Self Referral' in the 'Organisation' list.";
+    } else {
+      // If creating new referral, validate required fields (only if main error is not shown)
+      if (!newReader.referral_id) {
+        if (!newReferralOrgId) {
+          newErrors.referral_org = 'Organisation is required when creating a new enquiry';
+        }
+        if (!newReferralText.trim()) {
+          newErrors.referral_text = 'Enquiry text is required when creating a new enquiry';
+        }
+        if (!newReferralDate) {
+          newErrors.referral_date = 'Date is required when creating a new enquiry';
+        }
       }
     }
     
@@ -380,19 +380,19 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
     
     // referral_id is now mandatory - must either have existing or create new
     if (selectedRow && !selectedRow.referral_id && (!selectedReferralOrgId || !selectedReferralText || !selectedReferralDate)) {
-      newErrors.referral_required = 'Either select an existing enquiry or provide organisation, enquiry text, and date to create a new one';
-    }
-    
-    // If creating new referral, validate required fields
-    if (selectedRow && !selectedRow.referral_id) {
-      if (!selectedReferralOrgId) {
-        newErrors.referral_org = 'Organisation is required when creating a new enquiry';
-      }
-      if (!selectedReferralText.trim()) {
-        newErrors.referral_text = 'Enquiry text is required when creating a new enquiry';
-      }
-      if (!selectedReferralDate) {
-        newErrors.referral_date_required = 'Date is required when creating a new enquiry';
+      newErrors.referral_required = "Please click on the 'Enquiry' tab and either select an existing enquiry, or add organisation, enquiry text and date to create a new one. If it is a self referral or referral by friends/family, please select 'Self Referral' in the 'Organisation' list.";
+    } else {
+      // If creating new referral, validate required fields (only if main error is not shown)
+      if (selectedRow && !selectedRow.referral_id) {
+        if (!selectedReferralOrgId) {
+          newErrors.referral_org = 'Organisation is required when creating a new enquiry';
+        }
+        if (!selectedReferralText.trim()) {
+          newErrors.referral_text = 'Enquiry text is required when creating a new enquiry';
+        }
+        if (!selectedReferralDate) {
+          newErrors.referral_date_required = 'Date is required when creating a new enquiry';
+        }
       }
     }
     
