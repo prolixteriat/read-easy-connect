@@ -5,7 +5,7 @@
         "selective/basepath": "^2.1",
         "monolog/monolog": "^3.3",
         "phpmailer/phpmailer": "^6.9",
-        "firebase/php-jwt": "^6.11",
+        "firebase/php-jwt": "^7.0",
         "spomky-labs/otphp": "^11.3",
         "endroid/qr-code": "^6.0"
     },

@@ -46,7 +46,6 @@ pnpm-debug.log*
 # PHP / Composer
 # -------------------------
 vendor/
-composer.lock
 composer.phar
 
 # PHPUnit
