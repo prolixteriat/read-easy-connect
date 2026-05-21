@@ -234,49 +234,6 @@ CREATE TABLE `readers` (
 	UNIQUE KEY `unique_reader_affiliate` (`name`, `affiliate_id`)
 );
 
-DELIMITER //
-CREATE TRIGGER set_level_before_insert
-BEFORE INSERT ON readers
-FOR EACH ROW
-BEGIN
-    IF NEW.TP5_start_at IS NOT NULL THEN
-        SET NEW.level = 'TP5';
-    ELSEIF NEW.TP4_start_at IS NOT NULL THEN
-        SET NEW.level = 'TP4';
-    ELSEIF NEW.TP3_start_at IS NOT NULL THEN
-        SET NEW.level = 'TP3';
-    ELSEIF NEW.TP2_start_at IS NOT NULL THEN
-        SET NEW.level = 'TP2';
-    ELSE
-        SET NEW.level = 'TP1';
-    END IF;
-END;
-//
-
-DELIMITER ;
-
--- UPDATE trigger:
-DELIMITER //
-CREATE TRIGGER set_level_before_update
-BEFORE UPDATE ON readers
-FOR EACH ROW
-BEGIN
-    IF NEW.TP5_start_at IS NOT NULL THEN
-        SET NEW.level = 'TP5';
-    ELSEIF NEW.TP4_start_at IS NOT NULL THEN
-        SET NEW.level = 'TP4';
-    ELSEIF NEW.TP3_start_at IS NOT NULL THEN
-        SET NEW.level = 'TP3';
-    ELSEIF NEW.TP2_start_at IS NOT NULL THEN
-        SET NEW.level = 'TP2';
-    ELSE
-        SET NEW.level = 'TP1';
-    END IF;
-END;
-//
-
-DELIMITER ;
-
 CREATE TABLE `loans` (
 	`loan_id` INT AUTO_INCREMENT PRIMARY KEY,
 	`reader_id` INT NOT NULL,

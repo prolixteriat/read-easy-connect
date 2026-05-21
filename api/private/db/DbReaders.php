@@ -58,14 +58,16 @@ class DbReaders extends DbBase {
                 return new Status(false, 403, ['message' => 'Manager not associated with any affiliate']);
             }
 
+            $level = $this->calculate_level($params);
+
             $sql = 'INSERT INTO readers (name, affiliate_id, referral_id, area_id, 
-                        coach_id, status, availability, notes, enrolment_at, 
+                        coach_id, level, status, availability, notes, enrolment_at, 
                         coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, 
                         TP3_start_at, TP4_start_at, TP5_start_at, TP1_completion_at, 
                         TP2_completion_at, TP3_completion_at, TP4_completion_at, 
                         TP5_completion_at, ons4_1, ons4_2, ons4_3) 
                     VALUES (:name, :affiliate_id, :referral_id, :area_id, :coach_id, 
-                        :status, :availability, :notes, :enrolment_at, :coaching_start_at, 
+                        :level, :status, :availability, :notes, :enrolment_at, :coaching_start_at, 
                         :graduation_at, :TP1_start_at, :TP2_start_at, :TP3_start_at, 
                         :TP4_start_at, :TP5_start_at, :TP1_completion_at, :TP2_completion_at, 
                         :TP3_completion_at, :TP4_completion_at, :TP5_completion_at, 
@@ -78,6 +80,7 @@ class DbReaders extends DbBase {
                 ':referral_id'        => $params['referral_id'],
                 ':area_id'            => $params['area_id'] ?? null,
                 ':coach_id'           => $params['coach_id'] ?? null,
+                ':level'              => $level,
                 ':status'             => $params['status'] ?? 'NYS',
                 ':availability'       => $params['availability'] ?? null,
                 ':notes'              => $params['notes'] ?? null,
@@ -129,6 +132,7 @@ class DbReaders extends DbBase {
     # TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3 
 
     public function edit_reader(Request $request): Status {
+        $params = [];
         try {
             $status = $this->validate_token($request, ['manager', 'coordinator']);
             if (!$status->success) { 
@@ -217,11 +221,14 @@ class DbReaders extends DbBase {
             # Handle coach status updates
             $original_coach_id = $result['coach_id'];
             
+            $level = $this->calculate_level($merged_data);
+            
             $sql = 'UPDATE readers
                     SET affiliate_id = :affiliate_id,
                         referral_id = :referral_id,
                         area_id = :area_id,
                         coach_id = :coach_id,
+                        level = :level,
                         status = :status,
                         availability = :availability,
                         notes = :notes,
@@ -248,6 +255,7 @@ class DbReaders extends DbBase {
                 ':referral_id'        => $referral_id,
                 ':area_id'            => $area_id,
                 ':coach_id'           => $coach_id,
+                ':level'              => $level,
                 ':status'             => $reader_status,
                 ':availability'       => $availability,
                 ':notes'              => $notes,
@@ -448,9 +456,25 @@ class DbReaders extends DbBase {
                 $sql .= ' AND r.reader_id = :reader_id';
                 $params[':reader_id'] = $reader_id;
             }
+        } else {
+            throw new Exception('Unsupported role: ' . $this->role);
         }
 
         return ['sql' => $sql, 'params' => $params];
+    }
+    # --------------------------------------------------------------------------
+
+    private function calculate_level(array $data): string {
+        if (isset($data['TP5_start_at']) && $data['TP5_start_at'] !== null) {
+            return 'TP5';
+        } elseif (isset($data['TP4_start_at']) && $data['TP4_start_at'] !== null) {
+            return 'TP4';
+        } elseif (isset($data['TP3_start_at']) && $data['TP3_start_at'] !== null) {
+            return 'TP3';
+        } elseif (isset($data['TP2_start_at']) && $data['TP2_start_at'] !== null) {
+            return 'TP2';
+        }
+        return 'TP1';
     }
     # --------------------------------------------------------------------------
 
