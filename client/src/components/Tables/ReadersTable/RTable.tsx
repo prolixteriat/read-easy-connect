@@ -580,8 +580,8 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
         level: selectedRow.level,
         status: selectedRow.status,
         referral_id: finalReferralId, // This is now guaranteed to be a number
-        availability: selectedRow.availability || undefined,
-        notes: selectedRow.notes || undefined,
+        availability: selectedRow.availability,
+        notes: selectedRow.notes,
         enrolment_at: selectedRow.enrolment_at,
         coaching_start_at: selectedRow.coaching_start_at,
         graduation_at: selectedRow.graduation_at,
@@ -659,8 +659,8 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
       coach_id: newReader.coach_id || undefined,
       enrolment_at: newReader.enrolment_at || undefined,
       referral_id: referralId, // This is now mandatory
-      availability: newReader.availability || undefined,
-      notes: newReader.notes || undefined,
+      availability: newReader.availability,
+      notes: newReader.notes,
     });
     
     tableState.setIsSaving(false);
