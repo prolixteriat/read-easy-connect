@@ -16,7 +16,7 @@ import { useContacts } from '@hooks/useContact';
 import { editReader, addReader } from '@lib/api/apiReaders';
 import { addReferral, editReferral } from '@lib/api/apiReferrals';
 import { asString} from '@lib/helper';
-import { type TReferralStatus } from '@lib/types';
+import { type TReferralStatus, referralfStatusLabels } from '@lib/types';
 
 import { Button, ConfirmDialog, ErrorDialog, Loading, HoverHelp, MessageDialog } from '@components/Common';
 import { NotesDisplay } from '@components/Common/NotesDisplay';
@@ -1311,12 +1311,9 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                               value={selectedReferralStatus}
                               onChange={(e) => setSelectedReferralStatus(e.target.value)}
                             >
-                              <option value='new'>New</option>
-                              <option value='pending'>Pending</option>
-                              <option value='onhold'>On Hold</option>
-                              <option value='closed-successful'>Closed - Successful</option>
-                              <option value='closed-withdrew'>Closed - Withdrew</option>
-                              <option value='closed-unable'>Closed - Unable to help</option>
+                              {Object.entries(referralfStatusLabels).map(([value, label]) => (
+                                <option key={value} value={value}>{label}</option>
+                              ))}
                             </select>
                           </div>
                           <div>
@@ -1665,12 +1662,9 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                             value={newReferralStatus}
                             onChange={(e) => setNewReferralStatus(e.target.value)}
                           >
-                            <option value='new'>New</option>
-                            <option value='pending'>Pending</option>
-                            <option value='onhold'>On Hold</option>
-                            <option value='closed-successful'>Closed - Successful</option>
-                            <option value='closed-withdrew'>Closed - Withdrew</option>
-                            <option value='closed-unable'>Closed - Unable to help</option>
+                            {Object.entries(referralfStatusLabels).map(([value, label]) => (
+                              <option key={value} value={value}>{label}</option>
+                            ))}
                           </select>
                         </div>
                         <div>
