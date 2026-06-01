@@ -6,7 +6,7 @@ import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
 
 import { editOrg, addOrg } from '@lib/api/apiOrg';
 import { asString} from '@lib/helper';
-import { type TRole, orgTypeLabels } from '@lib/types';
+import { orgTypeLabels } from '@lib/types';
 import { Button, ErrorDialog, Loading } from '@components/Common';
 import { OrgNotesDisplay, type OrgNotesDisplayRef } from '@components/Common/OrgNotesDisplay';
 import { ContactsDisplay, type ContactsDisplayRef } from '@components/Common/ContactsDisplay';
@@ -117,10 +117,9 @@ interface OTableProps {
   setShowDisabled?: (show: boolean) => void;
   showReaderVenues?: boolean;
   setShowReaderVenues?: (show: boolean) => void;
-  userRole: TRole | null;
 }
 
-export function OTable({ data, onSave, showDisabled, setShowDisabled, showReaderVenues, setShowReaderVenues, userRole }: OTableProps): React.JSX.Element {
+export function OTable({ data, onSave, showDisabled, setShowDisabled, showReaderVenues, setShowReaderVenues }: OTableProps): React.JSX.Element {
   const tableState = useTableState({ id: 'name', desc: false });
   const { data: areasData } = useAreas();
   const [selectedRow, setSelectedRow] = useState<Org | null>(null);
@@ -594,11 +593,9 @@ export function OTable({ data, onSave, showDisabled, setShowDisabled, showReader
             )}
           </div>
         </div>
-        {userRole !== 'viewer' && (
-          <Button variant='primary' onClick={() => setIsAddOpen(true)} className='sm:whitespace-nowrap'>
-            Add Organisation
-          </Button>
-        )}
+        <Button variant='primary' onClick={() => setIsAddOpen(true)} className='sm:whitespace-nowrap'>
+          Add Organisation
+        </Button>
       </div>
     </BaseTable>
 
@@ -846,11 +843,9 @@ export function OTable({ data, onSave, showDisabled, setShowDisabled, showReader
                         <Button variant='secondary' type='button' onClick={handleCloseEditModal}>
                           Cancel
                         </Button>
-                        {userRole !== 'viewer' && (
-                          <Button type='submit' disabled={tableState.isSaving}>
-                            {tableState.isSaving ? 'Saving...' : 'Save'}
-                          </Button>
-                        )}
+                        <Button type='submit' disabled={tableState.isSaving}>
+                          {tableState.isSaving ? 'Saving...' : 'Save'}
+                        </Button>
                       </div>
                     </form>
                   </TabPanel>
@@ -873,11 +868,9 @@ export function OTable({ data, onSave, showDisabled, setShowDisabled, showReader
                         <Button variant='secondary' type='button' onClick={handleCloseEditModal}>
                           Cancel
                         </Button>
-                        {userRole !== 'viewer' && (
-                          <Button type='button' onClick={handleSave} disabled={tableState.isSaving}>
-                            {tableState.isSaving ? 'Saving...' : 'Save'}
-                          </Button>
-                        )}
+                        <Button type='button' onClick={handleSave} disabled={tableState.isSaving}>
+                          {tableState.isSaving ? 'Saving...' : 'Save'}
+                        </Button>
                       </div>
                     </div>
                   </TabPanel>
@@ -900,11 +893,9 @@ export function OTable({ data, onSave, showDisabled, setShowDisabled, showReader
                         <Button variant='secondary' type='button' onClick={handleCloseEditModal}>
                           Cancel
                         </Button>
-                        {userRole !== 'viewer' && (
-                          <Button type='button' onClick={handleSave} disabled={tableState.isSaving}>
-                            {tableState.isSaving ? 'Saving...' : 'Save'}
-                          </Button>
-                        )}
+                        <Button type='button' onClick={handleSave} disabled={tableState.isSaving}>
+                          {tableState.isSaving ? 'Saving...' : 'Save'}
+                        </Button>
                       </div>
                     </div>
                   </TabPanel>
@@ -922,7 +913,7 @@ export function OTable({ data, onSave, showDisabled, setShowDisabled, showReader
         data={null}
         onSave={handleAddOrg}
         isSaving={tableState.isSaving}
-        showSaveButton={userRole !== 'viewer'}
+        showSaveButton={true}
       >
         {tableState.showError && (
           <div className='mb-4 p-3 bg-red-50 border border-red-200 rounded-md'>
