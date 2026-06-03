@@ -1236,7 +1236,14 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                             }}
                           >
                             <option value=''>-- Select existing enquiry --</option>
-                            {referralsData?.filter(referral => !referral.status.startsWith('closed-') && (referral.reader_name === null || referral.reader_name === selectedRow.name)).sort((a, b) => a.referral_id - b.referral_id).map(referral => {
+                            {referralsData?.filter(referral => {
+                              // Always show the currently assigned referral, regardless of status
+                              if (referral.referral_id === selectedRow.referral_id) {
+                                return true;
+                              }
+                              // For other referrals, only show if not closed and (unassigned or matches reader name)
+                              return !referral.status.startsWith('closed-') && (referral.reader_name === null || referral.reader_name === selectedRow.name);
+                            }).sort((a, b) => a.referral_id - b.referral_id).map(referral => {
                               const date = new Date(referral.referral_at).toLocaleDateString('en-GB');
                               const displayText = `${referral.referral_id}: - ${date} - ${referral.org_name}${referral.area_name ? ` (${referral.area_name})` : ''}`;
                               return (
