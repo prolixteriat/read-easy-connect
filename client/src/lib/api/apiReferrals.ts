@@ -13,6 +13,8 @@ const AddReferralSchema = z.object({
     status: z.custom<TReferralStatus>(),
     referral: z.string(),
     referral_at: z.string(),
+    reader_first_name: z.string().nullable().optional(),
+    area_id: z.number().nullable().optional()
 });
 
 export type TAddReferralData = z.TypeOf<typeof AddReferralSchema>;
@@ -25,6 +27,8 @@ const EditReferralSchema = z.object({
     status: z.custom<TReferralStatus>().optional(),
     referral: z.string().optional(),
     referral_at: z.string().optional(),
+    reader_first_name: z.string().nullable().optional(),
+    area_id: z.number().nullable().optional()
 });
 
 export type TEditReferralData = z.TypeOf<typeof EditReferralSchema>;

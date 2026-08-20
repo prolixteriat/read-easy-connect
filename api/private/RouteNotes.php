@@ -10,6 +10,10 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 # ------------------------------------------------------------------------------
+/**
+ * @var \Slim\App $app
+ */
+# ------------------------------------------------------------------------------
 
 $app->post('/notes/add-coach-note', function (Request $request, Response $response) {
 

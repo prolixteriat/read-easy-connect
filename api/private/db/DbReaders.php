@@ -18,7 +18,7 @@ class DbReaders extends DbBase {
     # --------------------------------------------------------------------------
     # Role: manager, coordinator
     # Mandatory: referral_id
-    # Optional : area_id, coach_id, status, availability, notes, enrolment_at, 
+    # Optional : coach_id, status, availability, notes, enrolment_at, 
     #   coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, 
     #   TP4_start_at, TP5_start_at, TP1_completion_at, TP2_completion_at, 
     #   TP3_completion_at, TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3
@@ -60,13 +60,13 @@ class DbReaders extends DbBase {
 
             $level = $this->calculate_level($params);
 
-            $sql = 'INSERT INTO readers (name, affiliate_id, referral_id, area_id, 
+            $sql = 'INSERT INTO readers (name, affiliate_id, referral_id, 
                         coach_id, level, status, availability, notes, enrolment_at, 
                         coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, 
                         TP3_start_at, TP4_start_at, TP5_start_at, TP1_completion_at, 
                         TP2_completion_at, TP3_completion_at, TP4_completion_at, 
                         TP5_completion_at, ons4_1, ons4_2, ons4_3) 
-                    VALUES (:name, :affiliate_id, :referral_id, :area_id, :coach_id, 
+                    VALUES (:name, :affiliate_id, :referral_id, :coach_id, 
                         :level, :status, :availability, :notes, :enrolment_at, :coaching_start_at, 
                         :graduation_at, :TP1_start_at, :TP2_start_at, :TP3_start_at, 
                         :TP4_start_at, :TP5_start_at, :TP1_completion_at, :TP2_completion_at, 
@@ -78,7 +78,6 @@ class DbReaders extends DbBase {
                 ':name'               => $name,
                 ':affiliate_id'       => $user_affiliate,
                 ':referral_id'        => $params['referral_id'],
-                ':area_id'            => $params['area_id'] ?? null,
                 ':coach_id'           => $params['coach_id'] ?? null,
                 ':level'              => $level,
                 ':status'             => $params['status'] ?? 'NYS',
@@ -97,9 +96,9 @@ class DbReaders extends DbBase {
                 ':TP3_completion_at'  => $params['TP3_completion_at'] ?? null,
                 ':TP4_completion_at'  => $params['TP4_completion_at'] ?? null,
                 ':TP5_completion_at'  => $params['TP5_completion_at'] ?? null,
-                ':ons4_1'             => $params['ons4_1'] ?? false,
-                ':ons4_2'             => $params['ons4_2'] ?? false,
-                ':ons4_3'             => $params['ons4_3'] ?? false
+                ':ons4_1'             => $params['ons4_1'] ?? 'no',
+                ':ons4_2'             => $params['ons4_2'] ?? 'no',
+                ':ons4_3'             => $params['ons4_3'] ?? 'no'
             ]);
 
             $reader_id = $this->conn->lastInsertId();
@@ -126,7 +125,7 @@ class DbReaders extends DbBase {
     # --------------------------------------------------------------------------
     # Role: manager, coordinator
     # Mandatory: reader_id, referral_id
-    # Optional : area_id, coach_id, status, availability, notes, enrolment_at, 
+    # Optional : coach_id, status, availability, notes, enrolment_at, 
     # coaching_start_at, graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, 
     # TP4_start_at, TP5_start_at, TP1_completion_at, TP2_completion_at, TP3_completion_at, 
     # TP4_completion_at, TP5_completion_at, ons4_1, ons4_2, ons4_3 
@@ -152,7 +151,7 @@ class DbReaders extends DbBase {
 
             $reader_id = (int)$params['reader_id'];
 
-            $sql = 'SELECT name, affiliate_id, referral_id, area_id, coach_id, level, 
+            $sql = 'SELECT name, affiliate_id, referral_id, coach_id, level, 
                     status, availability, notes, enrolment_at, coaching_start_at, 
                     graduation_at, TP1_start_at, TP2_start_at, TP3_start_at, TP4_start_at, 
                     TP5_start_at, TP1_completion_at, TP2_completion_at, TP3_completion_at, 
@@ -178,7 +177,6 @@ class DbReaders extends DbBase {
             $name = $result['name'];
             $affiliate_id = $result['affiliate_id'];
             $referral_id = $params['referral_id'];
-            $area_id = array_key_exists('area_id', $params) ? $params['area_id'] : $result['area_id'];
             $coach_id = array_key_exists('coach_id', $params) ? $params['coach_id'] : $result['coach_id'];
             $reader_status = $params['status'] ?? $result['status'];
             $availability = array_key_exists('availability', $params) ? $params['availability'] : $result['availability'];
@@ -226,7 +224,6 @@ class DbReaders extends DbBase {
             $sql = 'UPDATE readers
                     SET affiliate_id = :affiliate_id,
                         referral_id = :referral_id,
-                        area_id = :area_id,
                         coach_id = :coach_id,
                         level = :level,
                         status = :status,
@@ -253,7 +250,6 @@ class DbReaders extends DbBase {
             $stmt->execute([
                 ':affiliate_id'       => $affiliate_id,
                 ':referral_id'        => $referral_id,
-                ':area_id'            => $area_id,
                 ':coach_id'           => $coach_id,
                 ':level'              => $level,
                 ':status'             => $reader_status,
@@ -370,6 +366,7 @@ class DbReaders extends DbBase {
                 return new Status(false, 404, ['message' => 'Reader not found or access denied']);
             }
             
+            $reader['reader_first_name'] = $this->decrypt_field($reader['reader_first_name']);
             $status = new Status(true, 200, $reader);
             
         } catch (Exception $e) {
@@ -397,7 +394,9 @@ class DbReaders extends DbBase {
             $stmt = $this->conn->prepare($query['sql']);
             $stmt->execute($query['params']);
             $readers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+            foreach ($readers as &$reader) {
+                $reader['reader_first_name'] = $this->decrypt_field($reader['reader_first_name']);
+            }
             $status = new Status(true, 200, $readers);
             
         } catch (Exception $e) {
@@ -416,11 +415,15 @@ class DbReaders extends DbBase {
             if (!$user_affiliate) {
                 throw new Exception('Manager affiliate not found');
             }
-            $sql = 'SELECT r.*, a.name as area_name, u.first_name as coach_first_name, u.last_name as coach_last_name 
+            $sql = 'SELECT r.*, a.name as area_name, u.first_name as coach_first_name, 
+                        u.last_name as coach_last_name, ref.first_name as reader_first_name,
+                        ref.area_id as area_id 
                     FROM readers r 
-                    LEFT JOIN areas a ON r.area_id = a.area_id 
+                    LEFT JOIN referrals ref ON r.referral_id = ref.referral_id 
+                    LEFT JOIN areas a ON ref.area_id = a.area_id 
                     LEFT JOIN users u ON r.coach_id = u.user_id 
                     WHERE r.affiliate_id = :affiliate_id';
+
             $params = [':affiliate_id' => $user_affiliate];
             if ($reader_id) {
                 $sql .= ' AND r.reader_id = :reader_id';
@@ -432,10 +435,13 @@ class DbReaders extends DbBase {
             if (!$user_affiliate) {
                 throw new Exception('Coordinator affiliate not found');
             }
-            $sql = 'SELECT r.*, a.name as area_name, u.first_name as coach_first_name, u.last_name as coach_last_name 
+            $sql = 'SELECT r.*, a.name as area_name, u.first_name as coach_first_name, 
+                        u.last_name as coach_last_name, ref.first_name as reader_first_name,
+                        ref.area_id as area_id  
                     FROM readers r
                     LEFT JOIN coaches c ON r.coach_id = c.coach_id
-                    LEFT JOIN areas a ON r.area_id = a.area_id 
+                    LEFT JOIN referrals ref ON r.referral_id = ref.referral_id
+                    LEFT JOIN areas a ON ref.area_id = a.area_id 
                     LEFT JOIN users u ON r.coach_id = u.user_id
                     WHERE r.affiliate_id = :affiliate_id 
                     AND (r.coach_id IS NULL OR c.coordinator_id = :coordinator_id)';
@@ -446,9 +452,12 @@ class DbReaders extends DbBase {
             }
 
         } elseif ($this->role === 'coach') {
-            $sql = 'SELECT r.*, a.name as area_name, u.first_name as coach_first_name, u.last_name as coach_last_name 
+            $sql = 'SELECT r.*, a.name as area_name, u.first_name as coach_first_name, 
+                        u.last_name as coach_last_name, ref.first_name as reader_first_name,
+                        ref.area_id as area_id  
                     FROM readers r 
-                    LEFT JOIN areas a ON r.area_id = a.area_id 
+                    LEFT JOIN referrals ref ON r.referral_id = ref.referral_id 
+                    LEFT JOIN areas a ON ref.area_id = a.area_id 
                     LEFT JOIN users u ON r.coach_id = u.user_id 
                     WHERE r.coach_id = :coach_id';
             $params = [':coach_id' => $this->user_id];

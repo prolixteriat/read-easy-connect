@@ -75,4 +75,5 @@ cache/
 *.swp
 **/config.*
 **/creds.*
+**/dev.php
 .htaccess

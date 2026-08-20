@@ -315,7 +315,7 @@ class DbReports extends DbBase {
             
             $query = '
                 SELECT 
-                    r.area_id,
+                    ref.area_id,
                     a.name as area_name,
                     c.coordinator_id,
                     CONCAT(coord_user.first_name, " ", coord_user.last_name) as coordinator_name,
@@ -330,7 +330,8 @@ class DbReports extends DbBase {
                     (r.TP4_start_at IS NOT NULL) as TP4,
                     (r.TP5_start_at IS NOT NULL) as TP5
                 FROM readers r
-                LEFT JOIN areas a ON r.area_id = a.area_id
+                LEFT JOIN referrals ref ON r.referral_id = ref.referral_id
+                LEFT JOIN areas a ON ref.area_id = a.area_id
                 LEFT JOIN coaches c ON r.coach_id = c.coach_id
                 LEFT JOIN users coord_user ON c.coordinator_id = coord_user.user_id
                 WHERE r.affiliate_id = :affiliate_id

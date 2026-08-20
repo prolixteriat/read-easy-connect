@@ -6,6 +6,8 @@ import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import useSWR from 'swr';
 import { z } from 'zod';
 
+import { useReaders } from '@hooks/useReaders';
+import { useCoaches } from '@hooks/useCoaches';
 import { useOrgs } from '@hooks/useOrg';
 import { useReferrals } from '@hooks/useReferrals';
 import { useOrgNotes, useReferralNotes } from '@hooks/useNotes';
@@ -34,9 +36,6 @@ const getReaderNotesUrl = (aboutId?: number): string => {
     return aboutId ? `${url}?about_id=${aboutId}` : url;
 }
 
-const getReadersUrl = (): string => `${apiBaseUrl}/readers/get-readers`;
-const getCoachesUrl = (): string => `${apiBaseUrl}/coaches/get-coaches`;
-
 // Schema definitions
 const NotesSchema = z.object({
     note_id: z.number(),
@@ -49,81 +48,9 @@ const NotesSchema = z.object({
     by_name: z.string(),
 });
 
-const ReadersSchema = z.object({
-    reader_id: z.number(),
-    name: z.string(),
-    affiliate_id: z.number(),
-    area_id: z.number().nullable(),
-    area_name: z.string().nullable(),
-    coach_id: z.number().nullable(),
-    coach_first_name: z.string().nullable(),
-    coach_last_name: z.string().nullable(),
-    referral_id: z.number().nullable(),
-    created_at: z.string(),
-    level: z.string(),
-    status: z.string(),
-    availability: z.string().nullable(),
-    notes: z.string().nullable(),
-    enrolment_at: z.string().nullable(),
-    coaching_start_at: z.string().nullable(),
-    graduation_at: z.string().nullable(),
-    TP1_start_at: z.string().nullable(),
-    TP2_start_at: z.string().nullable(),
-    TP3_start_at: z.string().nullable(),
-    TP4_start_at: z.string().nullable(),
-    TP5_start_at: z.string().nullable(),
-    TP1_completion_at: z.string().nullable(),
-    TP2_completion_at: z.string().nullable(),
-    TP3_completion_at: z.string().nullable(),
-    TP4_completion_at: z.string().nullable(),
-    TP5_completion_at: z.string().nullable(),
-    TP1_certificate: z.number(),
-    TP2_certificate: z.number(),
-    TP3_certificate: z.number(),
-    TP4_certificate: z.number(),
-    TP5_certificate: z.number(),
-    ons4_1: z.number(),
-    ons4_2: z.number(),
-    ons4_3: z.number(),
-});
-
-const CoachesSchema = z.object({
-    coach_id: z.number(),
-    coordinator_id: z.number().nullable(),
-    coordinator_first_name: z.string().nullable(),
-    coordinator_last_name: z.string().nullable(),
-    area_id: z.number().nullable(),
-    area_name: z.string().nullable(),
-    status: z.string(),
-    email_consent: z.number(),
-    whatsapp_consent: z.number(),
-    dbs_completed: z.number(),
-    ref_completed: z.number(),
-    commitment_completed: z.number(),
-    training: z.string(),
-    edib_training: z.string(),
-    consol_training: z.string(),
-    use_email: z.number(),
-    consol_training_at: z.string().nullable(),
-    availability: z.string().nullable(),
-    preferences: z.string().nullable(),
-    notes: z.string().nullable(),
-    created_at: z.string(),
-    first_name: z.string(),
-    last_name: z.string(),
-    email: z.string(),
-    user_status: z.string(),
-    disabled: z.number(),
-    password_reset: z.number(),
-});
-
 const NotesSchemaArray = z.array(NotesSchema);
-const ReadersSchemaArray = z.array(ReadersSchema);
-const CoachesSchemaArray = z.array(CoachesSchema);
 
 const notesFetcher = (data: string[]) => fetcherAuth(data, NotesSchemaArray);
-const readersFetcher = (data: string[]) => fetcherAuth(data, ReadersSchemaArray);
-const coachesFetcher = (data: string[]) => fetcherAuth(data, CoachesSchemaArray);
 
 interface QuickNoteProps {
   isOpen: boolean;
@@ -170,23 +97,11 @@ export default function QuickNote({ isOpen, onClose }: QuickNoteProps): React.JS
   const currentUserRole = jwtManager.getRole();
   const isViewer = currentUserRole === 'viewer';
 
-  // Use conditional SWR calls to prevent API calls for viewers
-  const readersKey = isViewer ? null : [getReadersUrl(), jwtManager.getToken()];
-  const coachesKey = isViewer ? null : [getCoachesUrl(), jwtManager.getToken()];
+  const { data: readersData } = useReaders();
+  const { data: coachesData } = useCoaches();
+
   const readerNotesKey = isViewer ? null : [getReaderNotesUrl(selectedReaderId || undefined), jwtManager.getToken()];
   const coachNotesKey = isViewer ? null : [getCoachNotesUrl(selectedCoachId || undefined), jwtManager.getToken()];
-  
-  const { data: readersData } = useSWR(
-    readersKey,
-    readersFetcher,
-    { refreshInterval: 5 * 60 * 1000 }
-  );
-  
-  const { data: coachesData } = useSWR(
-    coachesKey,
-    coachesFetcher,
-    { refreshInterval: 5 * 60 * 1000 }
-  );
   
   const { data: orgsData } = useOrgs();
   const { data: referralsData } = useReferrals();

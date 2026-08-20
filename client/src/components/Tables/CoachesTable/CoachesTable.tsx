@@ -8,7 +8,7 @@ import { CTable } from './CTable';
 
 // -----------------------------------------------------------------------------
 
-export default function CoachesTable(): React.JSX.Element {
+export default function CoachesTable({ excludePaired = false }: { excludePaired?: boolean }): React.JSX.Element {
   const { data, error, isLoading, mutate } = useCoaches();
   const [showLeavers, setShowLeavers] = useState(false);
 
@@ -24,7 +24,7 @@ export default function CoachesTable(): React.JSX.Element {
 
   return (
     <div className='p-4'>
-      <CTable data={filteredData} onSave={handleSave} showLeavers={showLeavers} setShowLeavers={setShowLeavers} />
+      <CTable data={filteredData} onSave={handleSave} showLeavers={showLeavers} setShowLeavers={setShowLeavers} excludePaired={excludePaired} />
     </div>
   );
 };

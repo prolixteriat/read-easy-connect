@@ -1,5 +1,5 @@
-DROP DATABASE IF EXISTS `readeasyconnect_v2`;
-CREATE DATABASE `readeasyconnect_v2`;
+DROP DATABASE IF EXISTS `readeasyconnect_v3`;
+CREATE DATABASE `readeasyconnect_v3`;
 
 USE `readeasyconnect_v2`;
 
@@ -124,17 +124,21 @@ CREATE TABLE `contacts` (
 
 CREATE TABLE `referrals` (
 	`referral_id` INT AUTO_INCREMENT PRIMARY KEY,
+	`first_name` VARCHAR(128),
 	`org_id`  INT NOT NULL,
 	`contact_id` INT,
 	`by_id` INT NOT NULL,
-	`status` ENUM('new', 'pending', 'onhold', 'closed-successful', 'closed-withdrew', 'closed-unable') NOT NULL DEFAULT 'new',
+	`area_id` INT,	
+	`status` ENUM('new', 'pending', 'onhold', 'closed-successful', 'closed-withdrew', 
+					'closed-unable', 'assessed', 'awaiting-assessment') NOT NULL DEFAULT 'new',
 	`referral` VARCHAR(1024) NOT NULL,
 	`referral_at` DATETIME NOT NULL,
 	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
 
 	FOREIGN KEY (`org_id`) REFERENCES `orgs`(`org_id`),
 	FOREIGN KEY (`contact_id`) REFERENCES `contacts`(`contact_id`),
-	FOREIGN KEY (`by_id`) REFERENCES `users`(`user_id`)
+	FOREIGN KEY (`by_id`) REFERENCES `users`(`user_id`),
+	FOREIGN KEY (`area_id`) REFERENCES `areas`(`area_id`),	
 );
 
 CREATE TABLE `referral_notes` (
@@ -194,10 +198,9 @@ CREATE TABLE `coordinators` (
 
 CREATE TABLE `readers` (
 	`reader_id` INT AUTO_INCREMENT PRIMARY KEY,
-	`name` VARCHAR(255) NOT NULL,	-- label - not real name
+	`name` VARCHAR(255) NOT NULL,   -- label rather than actual reader name
 	`affiliate_id` INT NOT NULL,
 	`referral_id` INT UNIQUE NOT NULL,
-	`area_id` INT,
 	`coach_id` INT,
 	`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
 	`level` ENUM('TP1', 'TP2', 'TP3', 'TP4', 'TP5') NOT NULL DEFAULT 'TP1',
@@ -222,12 +225,11 @@ CREATE TABLE `readers` (
 	`TP3_certificate` BOOLEAN NOT NULL DEFAULT FALSE,
 	`TP4_certificate` BOOLEAN NOT NULL DEFAULT FALSE,
 	`TP5_certificate` BOOLEAN NOT NULL DEFAULT FALSE,
-	`ons4_1` BOOLEAN NOT NULL DEFAULT FALSE,
-	`ons4_2` BOOLEAN NOT NULL DEFAULT FALSE,
-	`ons4_3` BOOLEAN NOT NULL DEFAULT FALSE,
+	`ons4_1` ENUM('no', 'yes', 'declined') NOT NULL DEFAULT 'no',
+	`ons4_2` ENUM('no', 'yes', 'declined') NOT NULL DEFAULT 'no',
+	`ons4_3` ENUM('no', 'yes', 'declined') NOT NULL DEFAULT 'no',
 	
 	FOREIGN KEY (`affiliate_id`) REFERENCES `affiliates`(`affiliate_id`),
-	FOREIGN KEY (`area_id`) REFERENCES `areas`(`area_id`),
 	FOREIGN KEY (`coach_id`) REFERENCES `users`(`user_id`),
 	FOREIGN KEY (`referral_id`) REFERENCES `referrals`(`referral_id`),
 	

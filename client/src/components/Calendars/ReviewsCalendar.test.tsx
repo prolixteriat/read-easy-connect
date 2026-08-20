@@ -65,22 +65,22 @@ vi.mock('@lib/jwtManager', () => ({
 
 import { useReviews } from '@hooks/useReviews';
 import { useUsers } from '@hooks/useUsers';
-import { useReaders } from '@hooks/useReaders';
+import { useReaders, type TReadersSchema } from '@hooks/useReaders';
 import { useVenues } from '@hooks/useOrg';
 import { useCoaches } from '@hooks/useCoaches';
 
 const mockReviews = [
-  { review_id: 1, coordinator_id: 1, coach_id: 1, reader_id: 1, date: '2024-01-01 10:00:00', venue_id: 1, status: 'scheduled', notes: null, created_at: '2024-01-01', reader_name: 'John Doe', first_name: 'Coach', last_name: 'One' },
-  { review_id: 2, coordinator_id: 1, coach_id: 2, reader_id: 2, date: '2024-01-02 11:00:00', venue_id: 1, status: 'attended', notes: 'Good session', created_at: '2024-01-02', reader_name: 'Jane Smith', first_name: 'Coach', last_name: 'Two' },
+  { review_id: 1, coordinator_id: 1, coach_id: 1, reader_id: 1, date: '2024-01-01 10:00:00', venue_id: 1, status: 'scheduled', notes: null, created_at: '2024-01-01', reader_name: 'John Doe', first_name: 'Coach', last_name: 'One', reader_first_name: 'John' },
+  { review_id: 2, coordinator_id: 1, coach_id: 2, reader_id: 2, date: '2024-01-02 11:00:00', venue_id: 1, status: 'attended', notes: 'Good session', created_at: '2024-01-02', reader_name: 'Jane Smith', first_name: 'Coach', last_name: 'Two', reader_first_name: 'Jane' },
 ];
 
 const mockUsers = [
   { user_id: 1, first_name: 'Coordinator', last_name: 'One', email: 'coord@test.com', role: 'coordinator', status: 'active', disabled: 0, affiliate_id: 1 },
 ];
 
-const mockReaders = [
-  { reader_id: 1, name: 'John Doe', affiliate_id: 1, area_id: 1, area_name: 'North Area', coach_id: 1, coach_first_name: 'Coach', coach_last_name: 'One', referral_id: null, created_at: '2024-01-01', level: 'TP1', status: 'S', availability: null, notes: null, enrolment_at: null, coaching_start_at: null, graduation_at: null, TP1_start_at: null, TP2_start_at: null, TP3_start_at: null, TP4_start_at: null, TP5_start_at: null, TP1_completion_at: null, TP2_completion_at: null, TP3_completion_at: null, TP4_completion_at: null, TP5_completion_at: null, TP1_certificate: 0, TP2_certificate: 0, TP3_certificate: 0, TP4_certificate: 0, TP5_certificate: 0, ons4_1: 0, ons4_2: 0, ons4_3: 0 },
-  { reader_id: 2, name: 'Jane Smith', affiliate_id: 1, area_id: 1, area_name: 'North Area', coach_id: 2, coach_first_name: 'Coach', coach_last_name: 'Two', referral_id: null, created_at: '2024-01-02', level: 'TP2', status: 'G', availability: null, notes: null, enrolment_at: null, coaching_start_at: null, graduation_at: null, TP1_start_at: null, TP2_start_at: null, TP3_start_at: null, TP4_start_at: null, TP5_start_at: null, TP1_completion_at: null, TP2_completion_at: null, TP3_completion_at: null, TP4_completion_at: null, TP5_completion_at: null, TP1_certificate: 0, TP2_certificate: 0, TP3_certificate: 0, TP4_certificate: 0, TP5_certificate: 0, ons4_1: 0, ons4_2: 0, ons4_3: 0 },
+const mockReaders: TReadersSchema = [
+  { reader_id: 1, name: 'John Doe', reader_first_name: 'John', affiliate_id: 1, area_id: 1, area_name: 'North Area', coach_id: 1, coach_first_name: 'Coach', coach_last_name: 'One', referral_id: null, created_at: '2024-01-01', level: 'TP1', status: 'S', availability: null, notes: null, enrolment_at: null, coaching_start_at: null, graduation_at: null, TP1_start_at: null, TP2_start_at: null, TP3_start_at: null, TP4_start_at: null, TP5_start_at: null, TP1_completion_at: null, TP2_completion_at: null, TP3_completion_at: null, TP4_completion_at: null, TP5_completion_at: null, TP1_certificate: 0, TP2_certificate: 0, TP3_certificate: 0, TP4_certificate: 0, TP5_certificate: 0, ons4_1: 'no', ons4_2: 'no', ons4_3: 'no' },
+  { reader_id: 2, name: 'Jane Smith', reader_first_name: 'Jane', affiliate_id: 1, area_id: 1, area_name: 'North Area', coach_id: 2, coach_first_name: 'Coach', coach_last_name: 'Two', referral_id: null, created_at: '2024-01-02', level: 'TP2', status: 'G', availability: null, notes: null, enrolment_at: null, coaching_start_at: null, graduation_at: null, TP1_start_at: null, TP2_start_at: null, TP3_start_at: null, TP4_start_at: null, TP5_start_at: null, TP1_completion_at: null, TP2_completion_at: null, TP3_completion_at: null, TP4_completion_at: null, TP5_completion_at: null, TP1_certificate: 0, TP2_certificate: 0, TP3_certificate: 0, TP4_certificate: 0, TP5_certificate: 0, ons4_1: 'no', ons4_2: 'no', ons4_3: 'no' },
 ];
 
 const mockVenues = [

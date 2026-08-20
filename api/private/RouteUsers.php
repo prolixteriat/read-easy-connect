@@ -12,6 +12,10 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 # ------------------------------------------------------------------------------
+/**
+ * @var \Slim\App $app
+ */
+# ------------------------------------------------------------------------------
 # TODO: Admin function
 $app->post('/users/change-role', function (Request $request, Response $response) {
 
@@ -49,6 +53,7 @@ $app->get('/', function (Request $request, Response $response) {
 # ------------------------------------------------------------------------------
 
 $app->get('/hello-world', function (Request $request, Response $response) {
+
     $response->getBody()->write('Hello world!');
     return $response
         ->withHeader('Content-Type', 'application/json')

@@ -242,10 +242,12 @@ class DbReviews extends DbBase {
             }
 
             $query = '
-                SELECT r.*, rd.name as reader_name, u.first_name, u.last_name
+                SELECT r.*, rd.name as reader_name, u.first_name, u.last_name,
+                    ref.first_name as reader_first_name
                 FROM reviews r
                 JOIN readers rd ON r.reader_id = rd.reader_id
                 JOIN users u ON r.coach_id = u.user_id
+                LEFT JOIN referrals ref ON rd.referral_id = ref.referral_id
                 WHERE r.coordinator_id = :coordinator_id
             ';
             $params = [':coordinator_id' => $data['coordinator_id']];
@@ -264,7 +266,9 @@ class DbReviews extends DbBase {
             $stmt = $this->conn->prepare($query);
             $stmt->execute($params);
             $reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+            foreach ($reviews as &$review) {
+                $review['reader_first_name'] = $this->decrypt_field($review['reader_first_name']);
+            }
             $status = new Status(true, 200, $reviews);
         } catch (Exception $e) {
             $this->logger->error('reviews_get_coordinator: ' . $e->getMessage());
@@ -292,21 +296,25 @@ class DbReviews extends DbBase {
             
             if ($user_role === 'manager') {
                 $query = '
-                    SELECT r.*, rd.name as reader_name, u.first_name, u.last_name
+                    SELECT r.*, rd.name as reader_name, u.first_name, u.last_name,
+                        ref.first_name as reader_first_name
                     FROM reviews r
                     JOIN readers rd ON r.reader_id = rd.reader_id
                     JOIN users u ON r.coach_id = u.user_id
                     JOIN coordinators c ON r.coordinator_id = c.coordinator_id
                     JOIN managers m ON c.affiliate_id = m.affiliate_id
+                    LEFT JOIN referrals ref ON rd.referral_id = ref.referral_id
                     WHERE m.manager_id = :user_id
                 ';
                 $params = [':user_id' => $user_id];
             } else { # coordinator
                 $query = '
-                    SELECT r.*, rd.name as reader_name, u.first_name, u.last_name
+                    SELECT r.*, rd.name as reader_name, u.first_name, u.last_name,
+                        ref.first_name as reader_first_name
                     FROM reviews r
                     JOIN readers rd ON r.reader_id = rd.reader_id
                     JOIN users u ON r.coach_id = u.user_id
+                    LEFT JOIN referrals ref ON rd.referral_id = ref.referral_id
                     WHERE r.coordinator_id = :user_id
                 ';
                 $params = [':user_id' => $user_id];
@@ -326,7 +334,9 @@ class DbReviews extends DbBase {
             $stmt = $this->conn->prepare($query);
             $stmt->execute($params);
             $reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+            foreach ($reviews as &$review) {
+                $review['reader_first_name'] = $this->decrypt_field($review['reader_first_name']);
+            }
             $status = new Status(true, 200, $reviews);
         } catch (Exception $e) {
             $this->logger->error('reviews_get_all: ' . $e->getMessage());

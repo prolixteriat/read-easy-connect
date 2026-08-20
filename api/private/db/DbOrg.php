@@ -288,7 +288,7 @@ class DbOrg extends DbBase {
             }
             if (isset($data['disabled'])) {
                 $updates[] = 'disabled = :disabled';
-                $params[':disabled'] = $data['disabled'];
+                $params[':disabled'] = (int)$data['disabled'];
             }
 
             if (empty($updates)) {
@@ -352,7 +352,7 @@ class DbOrg extends DbBase {
 
             if (isset($data['disabled'])) {
                 $updates[] = 'disabled = :disabled';
-                $params[':disabled'] = $data['disabled'];
+                $params[':disabled'] = (int)$data['disabled'];
             }
 
             if (isset($data['reader_area'])) {
@@ -597,7 +597,7 @@ class DbOrg extends DbBase {
             }
             if (isset($data['disabled'])) {
                 $updates[] = 'disabled = :disabled';
-                $params[':disabled'] = $data['disabled'];
+                $params[':disabled'] = (int)$data['disabled'];
             }
 
             if (empty($updates)) {
@@ -688,7 +688,7 @@ class DbOrg extends DbBase {
             }
             if (isset($data['disabled'])) {
                 $updates[] = 'disabled = :disabled';
-                $params[':disabled'] = $data['disabled'];
+                $params[':disabled'] = (int)$data['disabled'];
             }
 
             if (empty($updates)) {

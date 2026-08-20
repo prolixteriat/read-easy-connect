@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { type ColumnDef } from '@tanstack/react-table';
-import { X } from 'lucide-react';
+import { X, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
 
@@ -16,7 +17,23 @@ import { type TCoachStatus, type TUserStatus, type TTrainingStatus } from '@lib/
 
 import { Button, ConfirmDialog, ErrorDialog, Loading, HoverHelp } from '@components/Common';
 import { NotesDisplay } from '@components/Common/NotesDisplay';
-import { BaseTable, useTableState, createSortableHeader, createStatusColumn } from '../BaseTable';
+import { BaseTable, useTableState, createSortableHeader } from '../BaseTable';
+
+// -----------------------------------------------------------------------------
+
+function DropdownPortal({ anchorRef, portalRef, children }: { anchorRef: React.RefObject<HTMLElement | null>; portalRef: React.RefObject<HTMLDivElement | null>; children: React.ReactNode }) {
+  const [style, setStyle] = useState<React.CSSProperties>({});
+  useEffect(() => {
+    if (anchorRef.current) {
+      const rect = anchorRef.current.getBoundingClientRect();
+      setStyle({ position: 'fixed', top: rect.bottom + 4, right: window.innerWidth - rect.right, zIndex: 9999 });
+    }
+  }, [anchorRef]);
+  return createPortal(
+    <div ref={portalRef} className='bg-white border rounded shadow-lg p-2 min-w-max' style={style}>{children}</div>,
+    document.body
+  );
+}
 
 // -----------------------------------------------------------------------------
 
@@ -29,10 +46,69 @@ interface CTableProps {
   onSave: (updatedRow: Coach) => void;
   showLeavers?: boolean;
   setShowLeavers?: (show: boolean) => void;
+  excludePaired?: boolean;
 }
 
-export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProps): React.JSX.Element {
+export function CTable({ data, onSave, showLeavers, setShowLeavers, excludePaired = false }: CTableProps): React.JSX.Element {
   const tableState = useTableState({ id: 'first_name', desc: false });
+
+  const coachStatusOptions = useMemo(() => Array.from(new Set(data.map(c => c.status))).sort() as TCoachStatus[], [data]);
+  const userStatusOptions = useMemo(() => Array.from(new Set(data.map(c => c.user_status))).sort() as TUserStatus[], [data]);
+  const areaOptions = useMemo(() => Array.from(new Set(data.map(c => c.area_name || ''))).sort((a, b) => a.localeCompare(b)), [data]);
+
+  const [selectedCoachStatuses, setSelectedCoachStatuses] = useState<Set<string>>(new Set(excludePaired ? coachStatusOptions.filter(s => s !== 'paired') : coachStatusOptions));
+  const [selectedUserStatuses, setSelectedUserStatuses] = useState<Set<string>>(new Set(userStatusOptions));
+  const [selectedAreas, setSelectedAreas] = useState<Set<string>>(new Set(areaOptions));
+
+  const coachStatusKey = coachStatusOptions.join(',');
+  const userStatusKey = userStatusOptions.join(',');
+  const areaKey = areaOptions.join(',');
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setSelectedCoachStatuses(new Set(excludePaired ? coachStatusOptions.filter(s => s !== 'paired') : coachStatusOptions)); }, [coachStatusKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setSelectedUserStatuses(new Set(userStatusOptions)); }, [userStatusKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setSelectedAreas(new Set(areaOptions)); }, [areaKey]);
+
+  const [coachStatusDropdownOpen, setCoachStatusDropdownOpen] = useState(false);
+  const [userStatusDropdownOpen, setUserStatusDropdownOpen] = useState(false);
+  const [areaDropdownOpen, setAreaDropdownOpen] = useState(false);
+
+  const coachStatusDropdownRef = useRef<HTMLDivElement>(null);
+  const coachStatusAnchorRef = useRef<HTMLButtonElement>(null);
+  const coachStatusPortalRef = useRef<HTMLDivElement>(null);
+  const userStatusDropdownRef = useRef<HTMLDivElement>(null);
+  const userStatusAnchorRef = useRef<HTMLButtonElement>(null);
+  const userStatusPortalRef = useRef<HTMLDivElement>(null);
+  const areaDropdownRef = useRef<HTMLDivElement>(null);
+  const areaAnchorRef = useRef<HTMLButtonElement>(null);
+  const areaPortalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (coachStatusDropdownRef.current && !coachStatusDropdownRef.current.contains(e.target as Node) &&
+          coachStatusPortalRef.current && !coachStatusPortalRef.current.contains(e.target as Node))
+        setCoachStatusDropdownOpen(false);
+      if (userStatusDropdownRef.current && !userStatusDropdownRef.current.contains(e.target as Node) &&
+          userStatusPortalRef.current && !userStatusPortalRef.current.contains(e.target as Node))
+        setUserStatusDropdownOpen(false);
+      if (areaDropdownRef.current && !areaDropdownRef.current.contains(e.target as Node) &&
+          areaPortalRef.current && !areaPortalRef.current.contains(e.target as Node))
+        setAreaDropdownOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredData = useMemo(() =>
+    data.filter(c =>
+      selectedCoachStatuses.has(c.status) &&
+      selectedUserStatuses.has(c.user_status) &&
+      selectedAreas.has(c.area_name || '')
+    ),
+  [data, selectedCoachStatuses, selectedUserStatuses, selectedAreas]);
+
   const [selectedRow, setSelectedRow] = useState<Coach | null>(null);
   const [originalRow, setOriginalRow] = useState<Coach | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -61,7 +137,7 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
     .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)) || [];
   
   const { data: areasData } = useAreas();
-  const areas = areasData || [];
+  const areas = (areasData || []).filter(a => a.reader_area === 1);
   
   const [newCoach, setNewCoach] = useState({
     first_name: '', 
@@ -212,27 +288,115 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
       accessorKey: 'last_name',
       header: createSortableHeader('Last Name'),
     },
-    createStatusColumn('status', statusMap),
+    {
+      accessorKey: 'status',
+      header: () => {
+        const filtered = coachStatusOptions.some(s => !selectedCoachStatuses.has(s));
+        return (
+          <div className='flex items-center justify-between relative' ref={coachStatusDropdownRef}>
+            <button className='flex items-center'>Coach Status <ArrowUpDown className='ml-1 h-4 w-4' /></button>
+            <button ref={coachStatusAnchorRef} className='relative p-1 hover:bg-gray-200 rounded transition-colors'
+              onClick={(e) => { e.stopPropagation(); setCoachStatusDropdownOpen(o => !o); }} title='Filter by coach status'>
+              <ChevronDown size={14} className='text-gray-600' />
+              {filtered && <span className='absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500' />}
+            </button>
+            {coachStatusDropdownOpen && (
+              <DropdownPortal anchorRef={coachStatusAnchorRef} portalRef={coachStatusPortalRef}>
+                <div className='flex justify-start px-2 pb-1 border-b mb-1'>
+                  <button className='text-xs text-blue-600 hover:underline'
+                    onClick={(e) => { e.stopPropagation(); setSelectedCoachStatuses(filtered ? new Set(coachStatusOptions) : new Set()); }}>
+                    {filtered ? 'Select all' : 'Deselect all'}
+                  </button>
+                </div>
+                {coachStatusOptions.map(s => (
+                  <label key={s} className='flex items-center gap-2 px-2 py-1 hover:bg-gray-50 cursor-pointer text-sm font-normal'>
+                    <input type='checkbox' checked={selectedCoachStatuses.has(s)}
+                      onChange={() => setSelectedCoachStatuses(prev => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n; })} />
+                    {s}
+                  </label>
+                ))}
+              </DropdownPortal>
+            )}
+          </div>
+        );
+      },
+      cell: ({ getValue }) => {
+        const status = getValue() as string;
+        const styles = statusMap[status as keyof typeof statusMap] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+        return <span className={`px-2 py-1 text-xs rounded-full ${styles.bg} ${styles.text}`}>{status}</span>;
+      },
+    },
     {
       accessorKey: 'user_status',
-      header: createSortableHeader('User Status'),
+      header: () => {
+        const filtered = userStatusOptions.some(s => !selectedUserStatuses.has(s));
+        return (
+          <div className='flex items-center justify-between relative' ref={userStatusDropdownRef}>
+            <button className='flex items-center'>User Status <ArrowUpDown className='ml-1 h-4 w-4' /></button>
+            <button ref={userStatusAnchorRef} className='relative p-1 hover:bg-gray-200 rounded transition-colors'
+              onClick={(e) => { e.stopPropagation(); setUserStatusDropdownOpen(o => !o); }} title='Filter by user status'>
+              <ChevronDown size={14} className='text-gray-600' />
+              {filtered && <span className='absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500' />}
+            </button>
+            {userStatusDropdownOpen && (
+              <DropdownPortal anchorRef={userStatusAnchorRef} portalRef={userStatusPortalRef}>
+                <div className='flex justify-start px-2 pb-1 border-b mb-1'>
+                  <button className='text-xs text-blue-600 hover:underline'
+                    onClick={(e) => { e.stopPropagation(); setSelectedUserStatuses(filtered ? new Set(userStatusOptions) : new Set()); }}>
+                    {filtered ? 'Select all' : 'Deselect all'}
+                  </button>
+                </div>
+                {userStatusOptions.map(s => (
+                  <label key={s} className='flex items-center gap-2 px-2 py-1 hover:bg-gray-50 cursor-pointer text-sm font-normal'>
+                    <input type='checkbox' checked={selectedUserStatuses.has(s)}
+                      onChange={() => setSelectedUserStatuses(prev => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n; })} />
+                    {s}
+                  </label>
+                ))}
+              </DropdownPortal>
+            )}
+          </div>
+        );
+      },
       cell: ({ getValue }) => {
         const userStatus = getValue() as string;
         const styles = userStatusMap[userStatus as keyof typeof userStatusMap] || { bg: 'bg-gray-100', text: 'text-gray-800' };
-        return (
-          <span className={`px-2 py-1 text-xs rounded-full ${styles.bg} ${styles.text}`}>
-            {userStatus}
-          </span>
-        );
+        return <span className={`px-2 py-1 text-xs rounded-full ${styles.bg} ${styles.text}`}>{userStatus}</span>;
       },
     },
     {
       accessorKey: 'area_name',
-      header: createSortableHeader('Area'),
-      cell: ({ getValue }) => {
-        const areaName = getValue() as string | null;
-        return areaName || '';
+      header: () => {
+        const filtered = areaOptions.some(a => !selectedAreas.has(a));
+        return (
+          <div className='flex items-center justify-between relative whitespace-nowrap' ref={areaDropdownRef}>
+            <button className='flex items-center'>Area <ArrowUpDown className='ml-1 h-4 w-4' /></button>
+            <button ref={areaAnchorRef} className='relative p-1 hover:bg-gray-200 rounded transition-colors'
+              onClick={(e) => { e.stopPropagation(); setAreaDropdownOpen(o => !o); }} title='Filter by area'>
+              <ChevronDown size={14} className='text-gray-600' />
+              {filtered && <span className='absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500' />}
+            </button>
+            {areaDropdownOpen && (
+              <DropdownPortal anchorRef={areaAnchorRef} portalRef={areaPortalRef}>
+                <div className='flex justify-start px-2 pb-1 border-b mb-1'>
+                  <button className='text-xs text-blue-600 hover:underline'
+                    onClick={(e) => { e.stopPropagation(); setSelectedAreas(filtered ? new Set(areaOptions) : new Set()); }}>
+                    {filtered ? 'Select all' : 'Deselect all'}
+                  </button>
+                </div>
+                {areaOptions.map(a => (
+                  <label key={a} className='flex items-center gap-2 px-2 py-1 hover:bg-gray-50 cursor-pointer text-sm font-normal'>
+                    <input type='checkbox' checked={selectedAreas.has(a)}
+                      onChange={() => setSelectedAreas(prev => { const n = new Set(prev); n.has(a) ? n.delete(a) : n.add(a); return n; })} />
+                    {a || '(none)'}
+                  </label>
+                ))}
+              </DropdownPortal>
+            )}
+          </div>
+        );
       },
+      cell: ({ getValue }) => (getValue() as string | null) || '',
     },
     {
       id: 'coordinator',
@@ -583,7 +747,7 @@ export function CTable({ data, onSave, showLeavers, setShowLeavers }: CTableProp
   return (
     <>
       <BaseTable
-        data={data}
+        data={filteredData}
         columns={columns}
         onRowClick={handleRowClick}
         globalFilter={tableState.globalFilter}

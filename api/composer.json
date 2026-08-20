@@ -1,4 +1,7 @@
 {
+    "name": "read-easy-connect/app",
+    "description": "Read Easy Connect web application API",
+    "license": "MIT",    
     "require": {
         "slim/slim": "4.*",
         "slim/psr7": "^1.6",

@@ -1,11 +1,10 @@
-import { useState, useCallback } from 'react';
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
 import { X } from 'lucide-react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 
-import { type TReaderSchema, type TReadersSchema } from '@hooks/useReaders';
+import { type TReaderSchema, type TReadersSchema, type IuseReaders } from '@hooks/useReaders';
 import { useAreas } from '@hooks/useOrg';
 import { useCoaches } from '@hooks/useCoaches';
 import { useReaderNotes } from '@hooks/useNotes';
@@ -16,7 +15,7 @@ import { useContacts } from '@hooks/useContact';
 import { editReader, addReader } from '@lib/api/apiReaders';
 import { addReferral, editReferral } from '@lib/api/apiReferrals';
 import { asString} from '@lib/helper';
-import { type TReferralStatus, referralfStatusLabels } from '@lib/types';
+import { type TReferralStatus, referralfStatusLabels, type TOns4Status, ONS4_STATUSES, ons4StatusLabels } from '@lib/types';
 
 import { Button, ConfirmDialog, ErrorDialog, Loading, HoverHelp, MessageDialog } from '@components/Common';
 import { NotesDisplay } from '@components/Common/NotesDisplay';
@@ -31,37 +30,42 @@ type Reader = TReaderSchema;
 
 interface RTableProps {
   data: TReadersSchema;
-  onSave: (updatedRow: Reader) => void;
+  mutate: IuseReaders['mutate'];
   showGDOC?: boolean;
   setShowGDOC?: (show: boolean) => void;
 }
 
-export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): React.JSX.Element {
+export function RTable({ data, mutate, showGDOC, setShowGDOC }: RTableProps): React.JSX.Element {
   const tableState = useTableState({ id: 'name', desc: false });
   const [selectedRow, setSelectedRow] = useState<Reader | null>(null);
   const [originalRow, setOriginalRow] = useState<Reader | null>(null);
   const [selectedReferralOrgId, setSelectedReferralOrgId] = useState<number>(0);
   const [selectedReferralContactId, setSelectedReferralContactId] = useState<number | null>(null);
+  const [selectedReferralAreaId, setSelectedReferralAreaId] = useState<number | null>(null);
   const [selectedReferralText, setSelectedReferralText] = useState<string>('');
   const [selectedReferralStatus, setSelectedReferralStatus] = useState<string>('');
   const [selectedReferralDate, setSelectedReferralDate] = useState<string>('');
   const [newReferralOrgId, setNewReferralOrgId] = useState<number>(0);
   const [newReferralContactId, setNewReferralContactId] = useState<number | null>(null);
+  const [newReferralAreaId, setNewReferralAreaId] = useState<number | null>(null);
+  const [newReferralReaderFirstName, setNewReferralReaderFirstName] = useState<string | null>(null);
   const [newReferralText, setNewReferralText] = useState<string>('');
   const [newReferralStatus, setNewReferralStatus] = useState<string>('new');
   const [newReferralDate, setNewReferralDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [originalReferralOrgId, setOriginalReferralOrgId] = useState<number>(0);
   const [originalReferralContactId, setOriginalReferralContactId] = useState<number | null>(null);
+  const [originalReferralAreaId, setOriginalReferralAreaId] = useState<number | null>(null);
   const [originalReferralText, setOriginalReferralText] = useState<string>('');
   const [originalReferralStatus, setOriginalReferralStatus] = useState<string>('');
   const [originalReferralDate, setOriginalReferralDate] = useState<string>('');
+  const [selectedReferralReaderFirstName, setSelectedReferralReaderFirstName] = useState<string | null>(null);
+  const [originalReferralReaderFirstName, setOriginalReferralReaderFirstName] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showAddConfirm, setShowAddConfirm] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [addedReaderName, setAddedReaderName] = useState('');
   const [newReader, setNewReader] = useState({ 
-    area_id: null as number | null,
     coach_id: null as number | null,
     enrolment_at: null as string | null,
     referral_id: null as number | null,
@@ -83,7 +87,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
   });
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [noteError, setNoteError] = useState('');
-  const areas = areasData?.filter(area => area.disabled === 0) || [];
+  const areas = areasData?.filter(area => area.disabled === 0 && area.reader_area === 1) || [];
   const availableCoaches = coachesData?.filter(coach => 
     coach.user_status !== 'leaver' && 
     coach.user_status !== 'onhold' && 
@@ -157,9 +161,10 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
   const copyToClipboard = useCallback(async () => {
     if (!data || data.length === 0) return;
     
-    const headers = ['Reader ID', 'Level', 'Status', 'Area', 'Coach'];
+    const headers = ['Reader ID', 'First Name', 'Level', 'Status', 'Area', 'Coach'];
     const rows = data.map(reader => [
       reader.name,
+      reader.reader_first_name || '',
       reader.level,
       reader.status,
       reader.area_name || '',
@@ -201,6 +206,13 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
       accessorKey: 'name',
       header: createSortableHeader('Reader ID', true, copyToClipboard, tableState.showCopied),
     },
+    
+    {
+      accessorKey: 'reader_first_name',
+      header: createSortableHeader('First Name'),
+      cell: ({ getValue }) => getValue() as string ?? '',
+    },
+    
     {
       accessorKey: 'level',
       header: createSortableHeader('Level'),
@@ -218,6 +230,10 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
     {
       accessorKey: 'area_name',
       header: createSortableHeader('Area'),
+      cell: ({ row }) => {
+        const referral = referralsData?.find(ref => ref.referral_id === row.original.referral_id);
+        return referral?.area_name ?? row.original.area_name ?? '';
+      },
     },
     {
       id: 'coach',
@@ -242,28 +258,36 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
       
       setSelectedReferralOrgId(orgId);
       setSelectedReferralContactId(contactId);
+      setSelectedReferralAreaId(associatedReferral.area_id);
       setSelectedReferralText(referralText);
       setSelectedReferralStatus(status);
       setSelectedReferralDate(date);
+      setSelectedReferralReaderFirstName(associatedReferral.reader_first_name);
       
       // Store original values for change detection
       setOriginalReferralOrgId(orgId);
       setOriginalReferralContactId(contactId);
+      setOriginalReferralAreaId(associatedReferral.area_id);
       setOriginalReferralText(referralText);
       setOriginalReferralStatus(status);
       setOriginalReferralDate(date);
+      setOriginalReferralReaderFirstName(associatedReferral.reader_first_name);
     } else {
       setSelectedReferralOrgId(0);
       setSelectedReferralContactId(null);
+      setSelectedReferralAreaId(null);
       setSelectedReferralText('');
       setSelectedReferralStatus('');
       setSelectedReferralDate('');
+      setSelectedReferralReaderFirstName(null);
       
       setOriginalReferralOrgId(0);
       setOriginalReferralContactId(null);
+      setOriginalReferralAreaId(null);
       setOriginalReferralText('');
       setOriginalReferralStatus('');
       setOriginalReferralDate('');
+      setOriginalReferralReaderFirstName(null);
     }
     tableState.setErrors({});
     tableState.setIsOpen(true);
@@ -300,9 +324,11 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
     selectedRow.notes !== originalRow.notes ||
     selectedReferralOrgId !== originalReferralOrgId ||
     selectedReferralContactId !== originalReferralContactId ||
+    selectedReferralAreaId !== originalReferralAreaId ||
     selectedReferralText !== originalReferralText ||
     selectedReferralStatus !== originalReferralStatus ||
-    selectedReferralDate !== originalReferralDate
+    selectedReferralDate !== originalReferralDate ||
+    selectedReferralReaderFirstName !== originalReferralReaderFirstName
   );
 
   const handleCancel = () => {
@@ -319,7 +345,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
     tableState.setErrors({});
   };
 
-  const hasAddChanges = newReader.area_id || newReader.coach_id || newReader.enrolment_at || newReader.referral_id || newReader.availability || newReader.notes || newReferralOrgId || newReferralContactId || newReferralText || newReferralStatus !== 'new' || newReferralDate !== new Date().toISOString().split('T')[0];
+  const hasAddChanges = newReader.coach_id || newReader.enrolment_at || newReader.referral_id || newReader.availability || newReader.notes || newReferralOrgId || newReferralContactId || newReferralAreaId || newReferralText || newReferralStatus !== 'new' || newReferralDate !== new Date().toISOString().split('T')[0];
 
   const handleAddCancel = () => {
     if (hasAddChanges) {
@@ -333,7 +359,6 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
     setShowAddConfirm(false);
     setIsAddOpen(false);
     setNewReader({ 
-      area_id: null,
       coach_id: null,
       enrolment_at: null,
       referral_id: null,
@@ -343,6 +368,8 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
     // Reset referral fields
     setNewReferralOrgId(0);
     setNewReferralContactId(null);
+    setNewReferralAreaId(null);
+    setNewReferralReaderFirstName(null);
     setNewReferralText('');
     setNewReferralStatus('new');
     setNewReferralDate(new Date().toISOString().split('T')[0]);
@@ -525,10 +552,12 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
           referral_id: selectedRow.referral_id,
           org_id: selectedReferralOrgId,
           contact_id: selectedReferralContactId,
+          area_id: selectedReferralAreaId,
           by_id: 1, // TODO: Get actual user ID
           status: selectedReferralStatus as TReferralStatus,
           referral: selectedReferralText,
           referral_at: selectedReferralDate,
+          reader_first_name: selectedReferralReaderFirstName,
         });
         
         if (!referralResult.success) {
@@ -609,7 +638,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
       if (result.success) {
         // Refresh referrals data to ensure the enquiry tab shows updated information
         await referralsMutate?.();
-        onSave(selectedRow);
+        await mutate?.();
         tableState.setIsOpen(false);
         tableState.setErrors({});
       } else {
@@ -632,6 +661,8 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
       const referralResult = await addReferral({
         org_id: newReferralOrgId,
         contact_id: newReferralContactId,
+        area_id: newReferralAreaId,
+        reader_first_name: newReferralReaderFirstName,
         by_id: 1, // TODO: Get actual user ID
         status: (newReferralStatus || 'new') as TReferralStatus,
         referral: newReferralText,
@@ -655,7 +686,6 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
     
     // referralId is now guaranteed to exist
     const result = await addReader({
-      area_id: newReader.area_id || undefined,
       coach_id: newReader.coach_id || undefined,
       enrolment_at: newReader.enrolment_at || undefined,
       referral_id: referralId, // This is now mandatory
@@ -670,10 +700,9 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
       
       // Refresh referrals data to ensure the enquiry tab shows updated information
       await referralsMutate?.();
-      onSave({} as Reader);
+      await mutate?.();
       setIsAddOpen(false);
       setNewReader({ 
-        area_id: null,
         coach_id: null,
         enrolment_at: null,
         referral_id: null,
@@ -683,6 +712,8 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
       // Reset referral fields
       setNewReferralOrgId(0);
       setNewReferralContactId(null);
+      setNewReferralAreaId(null);
+      setNewReferralReaderFirstName(null);
       setNewReferralText('');
       setNewReferralStatus('new');
       setNewReferralDate(new Date().toISOString().split('T')[0]);
@@ -859,6 +890,37 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                 
                 <div className='grid grid-cols-2 gap-3 mb-4'>
                   <div>
+                    <label htmlFor='edit-coach' className='block text-sm font-medium text-gray-700'>
+                      Coach
+                      <HoverHelp text='Select a Coach to work with the Reader. Within the dropdown list, each Coach name is followed in brackets by their respective Coordinator name. An asterisk beside the Coach name indicates that the Coach is already assigned to at least one other Reader. Only trained Coaches are shown.' />
+                    </label>
+                    <select
+                      id='edit-coach'
+                      name='coach'
+                      className='w-full rounded-md border p-2'
+                      value={selectedRow.coach_id ?? ''}
+                      onChange={(e) => setSelectedRow({ ...selectedRow, coach_id: Number(e.target.value) || null })}
+                    >
+                      <option value=''>-- Select Coach --</option>
+                      {coaches.map(coach => {
+                        const coordinatorInfo = coach.coordinator_first_name && coach.coordinator_last_name 
+                          ? ` (${coach.coordinator_first_name} ${coach.coordinator_last_name})` 
+                          : '';
+                        const hasActiveReaders = data.some(reader => 
+                          reader.coach_id === coach.coach_id && 
+                          reader.reader_id !== selectedRow.reader_id &&
+                          !['G', 'DO', 'C'].includes(reader.status)
+                        );
+                        const pairedIndicator = hasActiveReaders ? '*' : '';
+                        return (
+                          <option key={coach.coach_id} value={coach.coach_id}>
+                            {coach.first_name} {coach.last_name}{pairedIndicator}{coordinatorInfo}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                  <div>
                     <label htmlFor='edit-status' className='block text-sm font-medium text-gray-700'>Status</label>
                     <select
                       id='edit-status'
@@ -875,56 +937,6 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                       <option value='C'>Closed - unsuccessful</option>
                     </select>
                   </div>
-                  <div>
-                    <label htmlFor='edit-area' className='block text-sm font-medium text-gray-700'>Area</label>
-                    <select
-                      id='edit-area'
-                      name='area'
-                      className='w-full rounded-md border p-2'
-                      value={selectedRow.area_id ?? ''}
-                      onChange={(e) => setSelectedRow({ ...selectedRow, area_id: Number(e.target.value) || null })}
-                    >
-                      <option value=''>-- Select Area --</option>
-                      {areas.map(area => (
-                        <option key={area.area_id} value={area.area_id}>
-                          {area.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className='mb-4'>
-                  <label htmlFor='edit-coach' className='block text-sm font-medium text-gray-700'>
-                    Coach
-                    <HoverHelp text='Select a Coach to work with the Reader. Within the dropdown list, each Coach name is followed in brackets by their respective Coordinator name. An asterisk beside the Coach name indicates that the Coach is already assigned to at least one other Reader. Only trained Coaches are shown.' />
-                  </label>
-                  <select
-                    id='edit-coach'
-                    name='coach'
-                    className='w-full rounded-md border p-2'
-                    value={selectedRow.coach_id ?? ''}
-                    onChange={(e) => setSelectedRow({ ...selectedRow, coach_id: Number(e.target.value) || null })}
-                  >
-                    <option value=''>-- Select Coach --</option>
-                    {coaches.map(coach => {
-                      const coordinatorInfo = coach.coordinator_first_name && coach.coordinator_last_name 
-                        ? ` (${coach.coordinator_first_name} ${coach.coordinator_last_name})` 
-                        : '';
-                      // Check if coach is assigned to any active readers (not G, DO, or C), excluding current reader
-                      const hasActiveReaders = data.some(reader => 
-                        reader.coach_id === coach.coach_id && 
-                        reader.reader_id !== selectedRow.reader_id &&
-                        !['G', 'DO', 'C'].includes(reader.status)
-                      );
-                      const pairedIndicator = hasActiveReaders ? '*' : '';
-                      return (
-                        <option key={coach.coach_id} value={coach.coach_id}>
-                          {coach.first_name} {coach.last_name}{pairedIndicator}{coordinatorInfo}
-                        </option>
-                      );
-                    })}
-                  </select>
                 </div>
 
                 <div className='grid grid-cols-2 gap-3 mb-4'>
@@ -1110,12 +1122,11 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                     <select
                       id='edit-ons4-1'
                       name='ons41'
-                      className={`w-full rounded-md border p-2 ${selectedRow.ons4_1 === 0 ? 'bg-red-100' : ''}`}
+                      className={`w-full rounded-md border p-2 ${selectedRow.ons4_1 === 'no' ? 'bg-red-100' : ''}`}
                       value={selectedRow.ons4_1}
-                      onChange={(e) => setSelectedRow({ ...selectedRow, ons4_1: Number(e.target.value) })}
+                      onChange={(e) => setSelectedRow({ ...selectedRow, ons4_1: e.target.value as TOns4Status })}
                     >
-                      <option value={0}>No</option>
-                      <option value={1}>Yes</option>
+                      {ONS4_STATUSES.map(s => <option key={s} value={s}>{ons4StatusLabels[s]}</option>)}
                     </select>
                   </div>
                   <div>
@@ -1123,12 +1134,11 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                     <select
                       id='edit-ons4-2'
                       name='ons42'
-                      className={`w-full rounded-md border p-2 ${selectedRow.ons4_2 === 0 ? 'bg-red-100' : ''}`}
+                      className={`w-full rounded-md border p-2 ${selectedRow.ons4_2 === 'no' ? 'bg-red-100' : ''}`}
                       value={selectedRow.ons4_2}
-                      onChange={(e) => setSelectedRow({ ...selectedRow, ons4_2: Number(e.target.value) })}
+                      onChange={(e) => setSelectedRow({ ...selectedRow, ons4_2: e.target.value as TOns4Status })}
                     >
-                      <option value={0}>No</option>
-                      <option value={1}>Yes</option>
+                      {ONS4_STATUSES.map(s => <option key={s} value={s}>{ons4StatusLabels[s]}</option>)}
                     </select>
                   </div>
                   <div>
@@ -1136,12 +1146,11 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                     <select
                       id='edit-ons4-3'
                       name='ons43'
-                      className={`w-full rounded-md border p-2 ${selectedRow.ons4_3 === 0 ? 'bg-red-100' : ''}`}
+                      className={`w-full rounded-md border p-2 ${selectedRow.ons4_3 === 'no' ? 'bg-red-100' : ''}`}
                       value={selectedRow.ons4_3}
-                      onChange={(e) => setSelectedRow({ ...selectedRow, ons4_3: Number(e.target.value) })}
+                      onChange={(e) => setSelectedRow({ ...selectedRow, ons4_3: e.target.value as TOns4Status })}
                     >
-                      <option value={0}>No</option>
-                      <option value={1}>Yes</option>
+                      {ONS4_STATUSES.map(s => <option key={s} value={s}>{ons4StatusLabels[s]}</option>)}
                     </select>
                   </div>
                 </div>
@@ -1222,9 +1231,11 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                                 if (selectedReferral) {
                                   setSelectedReferralOrgId(selectedReferral.org_id);
                                   setSelectedReferralContactId(selectedReferral.contact_id);
+                                  setSelectedReferralAreaId(selectedReferral.area_id);
                                   setSelectedReferralText(selectedReferral.referral);
                                   setSelectedReferralStatus(selectedReferral.status);
                                   setSelectedReferralDate(selectedReferral.referral_at.split('T')[0].split(' ')[0]);
+                                  setSelectedReferralReaderFirstName(selectedReferral.reader_first_name);
                                 }
                               } else {
                                 setSelectedReferralOrgId(0);
@@ -1232,10 +1243,11 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                                 setSelectedReferralText('');
                                 setSelectedReferralStatus('');
                                 setSelectedReferralDate('');
+                                setSelectedReferralReaderFirstName(null);
                               }
                             }}
                           >
-                            <option value=''>-- Select existing enquiry --</option>
+                            <option value=''>-- Select Existing Enquiry --</option>
                             {referralsData?.filter(referral => {
                               // Always show the currently assigned referral, regardless of status
                               if (referral.referral_id === selectedRow.referral_id) {
@@ -1245,7 +1257,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                               return !referral.status.startsWith('closed-') && (referral.reader_name === null || referral.reader_name === selectedRow.name);
                             }).sort((a, b) => a.referral_id - b.referral_id).map(referral => {
                               const date = new Date(referral.referral_at).toLocaleDateString('en-GB');
-                              const displayText = `${referral.referral_id}: - ${date} - ${referral.org_name}${referral.area_name ? ` (${referral.area_name})` : ''}`;
+                              const displayText = `${referral.referral_id}: - ${referral.reader_first_name ?? '[none]'} - ${date} - ${referral.area_name ?? '[none]'}`;
                               return (
                                 <option key={referral.referral_id} value={referral.referral_id}>
                                   {displayText}
@@ -1267,7 +1279,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                               setSelectedReferralOrgId(newOrgId);
                             }}
                           >
-                            <option value={0}>-- Select an organisation --</option>
+                            <option value={0}>-- Select Organisation --</option>
                             {orgsData?.filter(org => org.disabled === 0 && org.role_referrer === 1).map(org => (
                               <option key={org.org_id} value={org.org_id}>
                                 {org.name}{org.area_name ? ` (${org.area_name})` : ''}
@@ -1275,23 +1287,41 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                             ))}
                           </select>
                         </div>
-                        <div>
-                          <label htmlFor='edit-referral-contact' className='block text-sm font-medium text-gray-700'>Contact</label>
-                          <select
-                            id='edit-referral-contact'
-                            name='referral_contact_id'
-                            autoComplete='off'
-                            className='w-full rounded-md border p-2'
-                            value={selectedReferralContactId || ''}
-                            onChange={(e) => setSelectedReferralContactId(e.target.value ? Number(e.target.value) : null)}
-                          >
-                            <option value=''>-- Select a contact --</option>
-                            {contactsData?.filter(contact => 
-                              contact.disabled === 0 && contact.org_id === selectedReferralOrgId
-                            ).map(contact => (
-                              <option key={contact.contact_id} value={contact.contact_id}>{contact.name}</option>
-                            ))}
-                          </select>
+                        <div className='grid grid-cols-2 gap-3'>
+                          <div>
+                            <label htmlFor='edit-referral-contact' className='block text-sm font-medium text-gray-700'>Contact</label>
+                            <select
+                              id='edit-referral-contact'
+                              name='referral_contact_id'
+                              autoComplete='off'
+                              className='w-full rounded-md border p-2'
+                              value={selectedReferralContactId || ''}
+                              onChange={(e) => setSelectedReferralContactId(e.target.value ? Number(e.target.value) : null)}
+                            >
+                              <option value=''>-- Select Contact --</option>
+                              {contactsData?.filter(contact => 
+                                contact.disabled === 0 && contact.org_id === selectedReferralOrgId
+                              ).map(contact => (
+                                <option key={contact.contact_id} value={contact.contact_id}>{contact.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label htmlFor='edit-referral-area' className='block text-sm font-medium text-gray-700'>Reader Area</label>
+                            <select
+                              id='edit-referral-area'
+                              name='referral_area_id'
+                              autoComplete='off'
+                              className='w-full rounded-md border p-2'
+                              value={selectedReferralAreaId ?? ''}
+                              onChange={(e) => setSelectedReferralAreaId(Number(e.target.value) || null)}
+                            >
+                              <option value=''>-- Select Area --</option>
+                              {areas.map(area => (
+                                <option key={area.area_id} value={area.area_id}>{area.name}</option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
                         <div>
                           <label htmlFor='edit-referral-enquiry' className='block text-sm font-medium text-gray-700'>
@@ -1309,21 +1339,6 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                         </div>
                         <div className='grid grid-cols-2 gap-3'>
                           <div>
-                            <label htmlFor='edit-referral-status' className='block text-sm font-medium text-gray-700'>Status</label>
-                            <select
-                              id='edit-referral-status'
-                              name='referral_status'
-                              autoComplete='off'
-                              className='w-full rounded-md border p-2'
-                              value={selectedReferralStatus}
-                              onChange={(e) => setSelectedReferralStatus(e.target.value)}
-                            >
-                              {Object.entries(referralfStatusLabels).map(([value, label]) => (
-                                <option key={value} value={value}>{label}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
                             <label htmlFor='edit-referral-date' className='block text-sm font-medium text-gray-700'>Date *</label>
                             <input
                               id='edit-referral-date'
@@ -1336,6 +1351,33 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                             />
                             {tableState.errors.referral_date && <p className='text-red-500 text-xs mt-1'>{tableState.errors.referral_date}</p>}
                           </div>
+                          <div>
+                            <label htmlFor='edit-reader-first-name' className='block text-sm font-medium text-gray-700'>Reader First Name</label>
+                            <input
+                              id='edit-reader-first-name'
+                              name='reader_first_name'
+                              type='text'
+                              autoComplete='off'
+                              className='w-full rounded-md border p-2'
+                              value={selectedReferralReaderFirstName || ''}
+                              onChange={(e) => setSelectedReferralReaderFirstName(e.target.value || null)}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label htmlFor='edit-referral-status' className='block text-sm font-medium text-gray-700'>Status</label>
+                          <select
+                            id='edit-referral-status'
+                            name='referral_status'
+                            autoComplete='off'
+                            className='w-full rounded-md border p-2'
+                            value={selectedReferralStatus}
+                            onChange={(e) => setSelectedReferralStatus(e.target.value)}
+                          >
+                            {Object.entries(referralfStatusLabels).map(([value, label]) => (
+                              <option key={value} value={value}>{label}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
                       <div className='flex justify-end gap-2 mt-4'>
@@ -1444,20 +1486,33 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                   >
                     <div className='grid grid-cols-2 gap-3'>
                       <div>
-                        <label htmlFor='add-area' className='block text-sm font-medium text-gray-700'>Area</label>
+                        <label htmlFor='add-coach' className='block text-sm font-medium text-gray-700'>
+                          Coach
+                          <HoverHelp text='Select a Coach to work with the Reader. Within the dropdown list, each Coach name is followed in brackets by their respective Coordinator name. An asterisk beside the Coach name indicates that the Coach is already assigned to at least one other Reader. Only trained Coaches are shown.' />
+                        </label>
                         <select
-                          id='add-area'
-                          name='area'
+                          id='add-coach'
+                          name='coach'
                           className='w-full rounded-md border p-2'
-                          value={newReader.area_id ?? ''}
-                          onChange={(e) => setNewReader({ ...newReader, area_id: Number(e.target.value) || null })}
+                          value={newReader.coach_id ?? ''}
+                          onChange={(e) => setNewReader({ ...newReader, coach_id: Number(e.target.value) || null })}
                         >
-                          <option value=''>-- Select Area --</option>
-                          {areas.map(area => (
-                            <option key={area.area_id} value={area.area_id}>
-                              {area.name}
-                            </option>
-                          ))}
+                          <option value=''>-- Select Coach --</option>
+                          {coaches.map(coach => {
+                            const coordinatorInfo = coach.coordinator_first_name && coach.coordinator_last_name 
+                              ? ` (${coach.coordinator_first_name} ${coach.coordinator_last_name})` 
+                              : '';
+                            const hasActiveReaders = data.some(reader => 
+                              reader.coach_id === coach.coach_id && 
+                              !['G', 'DO', 'C'].includes(reader.status)
+                            );
+                            const pairedIndicator = hasActiveReaders ? '*' : '';
+                            return (
+                              <option key={coach.coach_id} value={coach.coach_id}>
+                                {coach.first_name} {coach.last_name}{pairedIndicator}{coordinatorInfo}
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
                       <div>
@@ -1471,38 +1526,6 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                           onChange={(e) => setNewReader({ ...newReader, enrolment_at: e.target.value || null })}
                         />
                       </div>
-                    </div>
-
-                    <div>
-                      <label htmlFor='add-coach' className='block text-sm font-medium text-gray-700'>
-                        Coach
-                        <HoverHelp text='Select a Coach to work with the Reader. Within the dropdown list, each Coach name is followed in brackets by their respective Coordinator name. An asterisk beside the Coach name indicates that the Coach is already assigned to at least one other Reader. Only trained Coaches are shown.' />
-                      </label>
-                      <select
-                        id='add-coach'
-                        name='coach'
-                        className='w-full rounded-md border p-2'
-                        value={newReader.coach_id ?? ''}
-                        onChange={(e) => setNewReader({ ...newReader, coach_id: Number(e.target.value) || null })}
-                      >
-                        <option value=''>-- Select Coach --</option>
-                        {coaches.map(coach => {
-                          const coordinatorInfo = coach.coordinator_first_name && coach.coordinator_last_name 
-                            ? ` (${coach.coordinator_first_name} ${coach.coordinator_last_name})` 
-                            : '';
-                          // Check if coach is assigned to any active readers (not G, DO, or C)
-                          const hasActiveReaders = data.some(reader => 
-                            reader.coach_id === coach.coach_id && 
-                            !['G', 'DO', 'C'].includes(reader.status)
-                          );
-                          const pairedIndicator = hasActiveReaders ? '*' : '';
-                          return (
-                            <option key={coach.coach_id} value={coach.coach_id}>
-                              {coach.first_name} {coach.last_name}{pairedIndicator}{coordinatorInfo}
-                            </option>
-                          );
-                        })}
-                      </select>
                     </div>
 
                     <div>
@@ -1580,6 +1603,8 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                               if (selectedReferral) {
                                 setNewReferralOrgId(selectedReferral.org_id);
                                 setNewReferralContactId(selectedReferral.contact_id);
+                                setNewReferralAreaId(selectedReferral.area_id);
+                                setNewReferralReaderFirstName(selectedReferral.reader_first_name);
                                 setNewReferralText(selectedReferral.referral);
                                 setNewReferralStatus(selectedReferral.status);
                                 setNewReferralDate(selectedReferral.referral_at.split('T')[0].split(' ')[0]);
@@ -1587,16 +1612,18 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                             } else {
                               setNewReferralOrgId(0);
                               setNewReferralContactId(null);
+                              setNewReferralAreaId(null);
+                              setNewReferralReaderFirstName(null);
                               setNewReferralText('');
                               setNewReferralStatus('');
                               setNewReferralDate('');
                             }
                           }}
                         >
-                          <option value=''>-- Select existing enquiry --</option>
+                          <option value=''>-- Select Existing Enquiry --</option>
                           {referralsData?.filter(referral => !referral.status.startsWith('closed-') && referral.reader_name === null).sort((a, b) => a.referral_id - b.referral_id).map(referral => {
                             const date = new Date(referral.referral_at).toLocaleDateString('en-GB');
-                            const displayText = `${referral.referral_id}: - ${date} - ${referral.org_name}${referral.area_name ? ` (${referral.area_name})` : ''}`;
+                            const displayText = `${referral.referral_id}: - ${referral.reader_first_name ?? '[none]'} - ${date} - ${referral.area_name ?? '[none]'}`;
                             return (
                               <option key={referral.referral_id} value={referral.referral_id}>
                                 {displayText}
@@ -1618,7 +1645,7 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                             setNewReferralOrgId(newOrgId);
                           }}
                         >
-                          <option value={0}>-- Select an organisation --</option>
+                          <option value={0}>-- Select Organisation --</option>
                           {orgsData?.filter(org => org.disabled === 0 && org.role_referrer === 1).map(org => (
                             <option key={org.org_id} value={org.org_id}>
                               {org.name}{org.area_name ? ` (${org.area_name})` : ''}
@@ -1626,23 +1653,41 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                           ))}
                         </select>
                       </div>
-                      <div>
-                        <label htmlFor='add-referral-contact' className='block text-sm font-medium text-gray-700'>Contact</label>
-                        <select
-                          id='add-referral-contact'
-                          name='referral_contact_id'
-                          autoComplete='off'
-                          className='w-full rounded-md border p-2'
-                          value={newReferralContactId || ''}
-                          onChange={(e) => setNewReferralContactId(e.target.value ? Number(e.target.value) : null)}
-                        >
-                          <option value=''>-- Select a contact --</option>
-                          {contactsData?.filter(contact => 
-                            contact.disabled === 0 && contact.org_id === newReferralOrgId
-                          ).map(contact => (
-                            <option key={contact.contact_id} value={contact.contact_id}>{contact.name}</option>
-                          ))}
-                        </select>
+                      <div className='grid grid-cols-2 gap-3'>
+                        <div>
+                          <label htmlFor='add-referral-contact' className='block text-sm font-medium text-gray-700'>Contact</label>
+                          <select
+                            id='add-referral-contact'
+                            name='referral_contact_id'
+                            autoComplete='off'
+                            className='w-full rounded-md border p-2'
+                            value={newReferralContactId || ''}
+                            onChange={(e) => setNewReferralContactId(e.target.value ? Number(e.target.value) : null)}
+                          >
+                            <option value=''>-- Select Contact --</option>
+                            {contactsData?.filter(contact => 
+                              contact.disabled === 0 && contact.org_id === newReferralOrgId
+                            ).map(contact => (
+                              <option key={contact.contact_id} value={contact.contact_id}>{contact.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label htmlFor='add-referral-area' className='block text-sm font-medium text-gray-700'>Reader Area</label>
+                          <select
+                            id='add-referral-area'
+                            name='referral_area_id'
+                            autoComplete='off'
+                            className='w-full rounded-md border p-2'
+                            value={newReferralAreaId ?? ''}
+                            onChange={(e) => setNewReferralAreaId(Number(e.target.value) || null)}
+                          >
+                            <option value=''>-- Select Area --</option>
+                            {areas.map(area => (
+                              <option key={area.area_id} value={area.area_id}>{area.name}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                       <div>
                         <label htmlFor='add-referral-enquiry' className='block text-sm font-medium text-gray-700'>
@@ -1660,21 +1705,6 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                       </div>
                       <div className='grid grid-cols-2 gap-3'>
                         <div>
-                          <label htmlFor='add-referral-status' className='block text-sm font-medium text-gray-700'>Status</label>
-                          <select
-                            id='add-referral-status'
-                            name='referral_status'
-                            autoComplete='off'
-                            className='w-full rounded-md border p-2'
-                            value={newReferralStatus}
-                            onChange={(e) => setNewReferralStatus(e.target.value)}
-                          >
-                            {Object.entries(referralfStatusLabels).map(([value, label]) => (
-                              <option key={value} value={value}>{label}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
                           <label htmlFor='add-referral-date' className='block text-sm font-medium text-gray-700'>Date *</label>
                           <input
                             id='add-referral-date'
@@ -1684,6 +1714,18 @@ export function RTable({ data, onSave, showGDOC, setShowGDOC }: RTableProps): Re
                             className='w-full rounded-md border p-2'
                             value={newReferralDate}
                             onChange={(e) => setNewReferralDate(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor='add-referral-reader-first-name' className='block text-sm font-medium text-gray-700'>Reader First Name</label>
+                          <input
+                            id='add-referral-reader-first-name'
+                            name='reader_first_name'
+                            type='text'
+                            autoComplete='off'
+                            className='w-full rounded-md border p-2'
+                            value={newReferralReaderFirstName || ''}
+                            onChange={(e) => setNewReferralReaderFirstName(e.target.value || null)}
                           />
                         </div>
                       </div>

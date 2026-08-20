@@ -12,10 +12,6 @@ export default function ReadersTable(): React.JSX.Element {
   const { data, error, isLoading, mutate } = useReaders();
   const [showGDOC, setShowGDOC] = useState(false);
 
-  const handleSave = () => {
-    mutate?.();
-  };
-
   if (isLoading) return <div className='p-4'><Loading /></div>;
   if (error) return <div className='p-4 text-red-600'>Error loading readers: {error.message}</div>;
   if (!data) return <div className='p-4'>No readers found</div>;
@@ -24,7 +20,7 @@ export default function ReadersTable(): React.JSX.Element {
 
   return (
     <div className='p-4'>
-      <RTable data={filteredData} onSave={handleSave} showGDOC={showGDOC} setShowGDOC={setShowGDOC} />
+      <RTable data={filteredData} mutate={mutate} showGDOC={showGDOC} setShowGDOC={setShowGDOC} />
     </div>
   );
 };

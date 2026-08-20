@@ -1,20 +1,46 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { type ColumnDef } from '@tanstack/react-table';
-import { X } from 'lucide-react';
+import { X, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
 
 import { addReferral, editReferral } from '@lib/api/apiReferrals';
 import { asString } from '@lib/helper';
-import { referralfStatusLabels, type TReferralStatus } from '@lib/types';
+import { referralfStatusLabels, referralfStatusColors, type TReferralStatus } from '@lib/types';
 import { type TReferralSchema } from '@hooks/useReferrals';
-import { useOrgs } from '@hooks/useOrg';
+import { useOrgs, useAreas } from '@hooks/useOrg';
 import { useContacts } from '@hooks/useContact';
 import { useReferralNotes } from '@hooks/useNotes';
 import { Button, ErrorDialog, Loading } from '@components/Common';
 import { ReferralNotesDisplay, type ReferralNotesDisplayRef } from '@components/Common/ReferralNotesDisplay';
 import { BaseTable, useTableState, createSortableHeader } from '../BaseTable';
+
+// -----------------------------------------------------------------------------
+
+function DropdownPortal({ anchorRef, portalRef, align = 'left', children }: { anchorRef: React.RefObject<HTMLElement | null>; portalRef: React.RefObject<HTMLDivElement | null>; align?: 'left' | 'right'; children: React.ReactNode }) {
+  const [style, setStyle] = useState<React.CSSProperties>({});
+
+  useEffect(() => {
+    if (anchorRef.current) {
+      const rect = anchorRef.current.getBoundingClientRect();
+      setStyle({
+        position: 'fixed',
+        top: rect.bottom + 4,
+        ...(align === 'right' ? { right: window.innerWidth - rect.right } : { left: rect.left }),
+        zIndex: 9999,
+      });
+    }
+  }, [anchorRef, align]);
+
+  return createPortal(
+    <div ref={portalRef} className='bg-white border rounded shadow-lg p-2 min-w-max' style={style}>
+      {children}
+    </div>,
+    document.body
+  );
+}
 
 // -----------------------------------------------------------------------------
 
@@ -87,13 +113,82 @@ interface RTableProps {
   onSave: () => void;
   showClosed?: boolean;
   setShowClosed?: (show: boolean) => void;
+  showCoaches?: boolean;
+  setShowCoaches?: (show: boolean) => void;
   showAddButton?: boolean;
 }
 
-export function RTable({ data, onSave, showClosed, setShowClosed, showAddButton = true }: RTableProps): React.JSX.Element {
-  const tableState = useTableState({ id: 'referral_at', desc: true });
+export function RTable({ data, onSave, showClosed, setShowClosed, showCoaches, setShowCoaches, showAddButton = true }: RTableProps): React.JSX.Element {
+  const tableState = useTableState({ id: 'referral_id', desc: true });
+  const availableAreas = useMemo(() =>
+    Array.from(new Set(
+      data
+        .filter(r => showClosed || !r.status.startsWith('closed-'))
+        .map(r => r.area_name || '')
+    )).sort((a, b) => a.localeCompare(b)),
+  [data, showClosed]);
+  const [selectedAreas, setSelectedAreas] = useState<Set<string>>(new Set(availableAreas));
+  const [areaDropdownOpen, setAreaDropdownOpen] = useState(false);
+  const areaDropdownRef = useRef<HTMLDivElement>(null);
+  const areaAnchorRef = useRef<HTMLButtonElement>(null);
+  const areaPortalRef = useRef<HTMLDivElement>(null);
+  const availableAreasKey = availableAreas.join(',');
+
+  useEffect(() => {
+    setSelectedAreas(new Set(availableAreas));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableAreasKey]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        areaDropdownRef.current && !areaDropdownRef.current.contains(e.target as Node) &&
+        areaPortalRef.current && !areaPortalRef.current.contains(e.target as Node)
+      ) {
+        setAreaDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const availableStatuses = useMemo(() => {
+    const present = new Set(
+      data
+        .filter(r => showClosed || !r.status.startsWith('closed-'))
+        .map(r => r.status)
+    );
+    return (Object.keys(referralfStatusLabels) as (keyof typeof referralfStatusLabels)[]).filter(s => present.has(s));
+  }, [data, showClosed]);
+  const [selectedStatuses, setSelectedStatuses] = useState<Set<string>>(new Set(availableStatuses));
+
+  const availableStatusesKey = availableStatuses.join(',');
+
+  useEffect(() => {
+    setSelectedStatuses(new Set(availableStatuses));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableStatusesKey]);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const statusAnchorRef = useRef<HTMLButtonElement>(null);
+  const statusPortalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node) &&
+        statusPortalRef.current && !statusPortalRef.current.contains(e.target as Node)
+      ) {
+        setStatusDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const { data: orgsData } = useOrgs();
   const { data: contactsData } = useContacts();
+  const { data: areasData } = useAreas();
+  const readerAreas = areasData?.filter(area => area.disabled === 0 && area.reader_area === 1) || [];
   const [selectedRow, setSelectedRow] = useState<TReferralSchema | null>(null);
   const [originalSelectedRow, setOriginalSelectedRow] = useState<TReferralSchema | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -110,20 +205,23 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showAddButton 
     status: 'new' as TReferralStatus,
     referral: '',
     referral_at: new Date().toISOString().split('T')[0],
+    reader_first_name: '' as string | null,
+    area_id: null as number | null,
   });
 
   const copyToClipboard = useCallback(async () => {
     if (!data || data.length === 0) return;
     
-    const headers = ['ID', 'Date', 'By', 'Organisation', 'Area', 'Status', 'Contact'];
+    const headers = ['ID', 'First Name', 'Date', 'Status', 'Reader Area', 'Organisation', 'Contact', 'By'];
     const rows = data.map(referral => [
       referral.referral_id.toString(),
+      referral.reader_first_name || '',
       referral.referral_at,
-      `${referral.first_name} ${referral.last_name}`,
-      referral.org_name,
-      referral.area_name || '',
       referralfStatusLabels[referral.status],
-      referral.contact_name || ''
+      referral.area_name || '',
+      referral.org_name,
+      referral.contact_name || '',
+      `${referral.first_name} ${referral.last_name}`,
     ]);
 
     const csvContent = [headers, ...rows]
@@ -156,6 +254,17 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showAddButton 
       },
     },
     {
+      accessorKey: 'reader_first_name',
+      header: () => (
+        <div className='flex items-center whitespace-nowrap'>
+          <button className='flex items-center'>
+            First Name <ArrowUpDown className='ml-1 h-4 w-4' />
+          </button>
+        </div>
+      ),
+      cell: ({ getValue }) => getValue() || '',
+    },
+    {
       accessorKey: 'referral_at',
       header: createSortableHeader('Date'),
       cell: ({ getValue }) => {
@@ -164,61 +273,138 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showAddButton 
       },
     },
     {
-      id: 'by',
-      header: createSortableHeader('By'),
-      accessorFn: (row) => `${row.first_name} ${row.last_name}`,
-    },
-    {
-      accessorKey: 'org_name',
-      header: createSortableHeader('Organisation'),
-    },
-    {
-      accessorKey: 'area_name',
-      header: createSortableHeader('Area'),
-      cell: ({ getValue }) => getValue() || '',
-    },
-    {
       accessorKey: 'status',
-      header: createSortableHeader('Status'),
+      header: () => {
+        const statusFiltered = availableStatuses.some(s => !selectedStatuses.has(s));
+        return (
+        <div className='flex items-center justify-between relative' ref={statusDropdownRef}>
+          <button className='flex items-center'>
+            Status <ArrowUpDown className='ml-1 h-4 w-4' />
+          </button>
+          <button
+            ref={statusAnchorRef}
+            className='relative p-1 hover:bg-gray-200 rounded transition-colors'
+            onClick={(e) => { e.stopPropagation(); setStatusDropdownOpen(o => !o); }}
+            title='Filter by status'
+          >
+            <ChevronDown size={14} className='text-gray-600' />
+            {statusFiltered && <span className='absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500' />}
+          </button>
+          {statusDropdownOpen && (
+            <DropdownPortal anchorRef={statusAnchorRef} portalRef={statusPortalRef} align='right'>
+              <div className='flex justify-start px-2 pb-1 border-b mb-1'>
+                <button
+                  className='text-xs text-blue-600 hover:underline'
+                  onClick={(e) => { e.stopPropagation(); setSelectedStatuses(statusFiltered ? new Set(availableStatuses) : new Set()); }}
+                >
+                  {statusFiltered ? 'Select all' : 'Deselect all'}
+                </button>
+              </div>
+              {availableStatuses.map(s => (
+                <label key={s} className='flex items-center gap-2 px-2 py-1 hover:bg-gray-50 cursor-pointer text-sm font-normal'>
+                  <input
+                    type='checkbox'
+                    checked={selectedStatuses.has(s)}
+                    onChange={() => {
+                      setSelectedStatuses(prev => {
+                        const next = new Set(prev);
+                        if (next.has(s)) { next.delete(s); } else { next.add(s); }
+                        return next;
+                      });
+                    }}
+                  />
+                  {referralfStatusLabels[s]}
+                </label>
+              ))}
+            </DropdownPortal>
+          )}
+        </div>
+        );
+      },
       cell: ({ getValue }) => {
         const status = getValue() as keyof typeof referralfStatusLabels;
-        const getStatusColor = (status: string) => {
-          switch (status) {
-            case 'new':
-              return 'bg-green-100 text-green-800';
-            case 'pending':
-              return 'bg-blue-100 text-blue-800';
-            case 'onhold':
-              return 'bg-yellow-100 text-yellow-800';
-            case 'closed-successful':
-              return 'bg-fuchsia-100 text-fuchsia-800';
-            case 'closed-withdrew':
-              return 'bg-orange-100 text-orange-800';
-            case 'closed-unable':
-              return 'bg-red-100 text-red-800';
-            default:
-              return 'bg-gray-100 text-gray-800';
-          }
-        };
         return (
-          <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(status)}`}>
+          <span className={`px-2 py-1 text-xs rounded-full ${referralfStatusColors[status] ?? 'bg-gray-100 text-gray-800'}`}>
             {referralfStatusLabels[status]}
           </span>
         );
       },
     },
     {
+      accessorKey: 'area_name',
+      header: () => {
+        const areaFiltered = availableAreas.some(a => !selectedAreas.has(a));
+        return (
+          <div className='flex items-center justify-between relative whitespace-nowrap' ref={areaDropdownRef}>
+            <button className='flex items-center'>
+              Reader Area <ArrowUpDown className='ml-1 h-4 w-4' />
+            </button>
+            <button
+              ref={areaAnchorRef}
+              className='relative p-1 hover:bg-gray-200 rounded transition-colors'
+              onClick={(e) => { e.stopPropagation(); setAreaDropdownOpen(o => !o); }}
+              title='Filter by area'
+            >
+              <ChevronDown size={14} className='text-gray-600' />
+              {areaFiltered && <span className='absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500' />}
+            </button>
+            {areaDropdownOpen && (
+              <DropdownPortal anchorRef={areaAnchorRef} portalRef={areaPortalRef} align='right'>
+                <div className='flex justify-start px-2 pb-1 border-b mb-1'>
+                  <button
+                    className='text-xs text-blue-600 hover:underline'
+                    onClick={(e) => { e.stopPropagation(); setSelectedAreas(areaFiltered ? new Set(availableAreas) : new Set()); }}
+                  >
+                    {areaFiltered ? 'Select all' : 'Deselect all'}
+                  </button>
+                </div>
+                {availableAreas.map(a => (
+                  <label key={a} className='flex items-center gap-2 px-2 py-1 hover:bg-gray-50 cursor-pointer text-sm font-normal'>
+                    <input
+                      type='checkbox'
+                      checked={selectedAreas.has(a)}
+                      onChange={() => {
+                        setSelectedAreas(prev => {
+                          const next = new Set(prev);
+                          if (next.has(a)) { next.delete(a); } else { next.add(a); }
+                          return next;
+                        });
+                      }}
+                    />
+                    {a || '(none)'}
+                  </label>
+                ))}
+              </DropdownPortal>
+            )}
+          </div>
+        );
+      },
+      cell: ({ getValue }) => getValue() || '',
+    },
+    {
+      accessorKey: 'org_name',
+      header: createSortableHeader('Organisation'),
+    },
+    {
       accessorKey: 'contact_name',
       header: createSortableHeader('Contact'),
       cell: ({ getValue }) => getValue() || '',
+    },
+    {
+      id: 'by',
+      header: createSortableHeader('By'),
+      accessorFn: (row) => `${row.first_name} ${row.last_name}`,
     },
   ];
 
   const filteredData = useMemo(() => {
     if (!data) return [];
-    if (showClosed) return data;
-    return data.filter(referral => !referral.status.startsWith('closed-'));
-  }, [data, showClosed]);
+    const statusFiltered = data.filter(referral =>
+      selectedStatuses.has(referral.status) && selectedAreas.has(referral.area_name || '')
+    );
+    if (showClosed) return statusFiltered;
+    return statusFiltered.filter(referral => !referral.status.startsWith('closed-'));
+  }, [data, showClosed, selectedStatuses, selectedAreas]);
 
   const handleRowClick = (row: TReferralSchema) => {
     setSelectedRow(row);
@@ -254,6 +440,8 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showAddButton 
       status: 'new' as TReferralStatus,
       referral: '',
       referral_at: new Date().toISOString().split('T')[0],
+      reader_first_name: null as string | null,
+      area_id: null as number | null,
     };
     const hasChanges = JSON.stringify(newReferral) !== JSON.stringify(initialNewReferral);
     setHasUnsavedChanges(hasChanges);
@@ -279,6 +467,8 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showAddButton 
         status: selectedRow.status,
         referral: selectedRow.referral,
         referral_at: selectedRow.referral_at,
+        reader_first_name: selectedRow.reader_first_name,
+        area_id: selectedRow.area_id,
       });
       
       tableState.setIsSaving(false);
@@ -328,6 +518,8 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showAddButton 
       status: newReferral.status,
       referral: newReferral.referral,
       referral_at: newReferral.referral_at,
+      reader_first_name: newReferral.reader_first_name || null,
+      area_id: newReferral.area_id,
     });
     
     tableState.setIsSaving(false);
@@ -341,6 +533,8 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showAddButton 
         status: 'new',
         referral: '',
         referral_at: new Date().toISOString().split('T')[0],
+        reader_first_name: null,
+        area_id: null,
       });
       setHasUnsavedChanges(false);
       tableState.setErrors({});
@@ -367,30 +561,16 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showAddButton 
       status: 'new',
       referral: '',
       referral_at: new Date().toISOString().split('T')[0],
+      reader_first_name: null,
+      area_id: null,
     });
     setHasUnsavedChanges(false);
     setShowUnsavedDialog(false);
     tableState.setErrors({});
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'new':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-blue-100 text-blue-800';
-      case 'onhold':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'closed-successful':
-        return 'bg-fuchsia-100 text-fuchsia-800';
-      case 'closed-withdrew':
-        return 'bg-orange-100 text-orange-800';
-      case 'closed-unable':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const getStatusColor = (status: string) =>
+    referralfStatusColors[status as TReferralStatus] ?? 'bg-gray-100 text-gray-800';
 
   const renderMobileCard = (referral: TReferralSchema) => (
     <div className='bg-white border rounded-lg p-4 shadow-sm'>
@@ -433,18 +613,35 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showAddButton 
               value={tableState.globalFilter ?? ''}
               onChange={(e) => tableState.setGlobalFilter(e.target.value)}
             />
-            {setShowClosed && (
-              <label htmlFor='show-closed-referrals' className='absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1 text-xs'>
-                <input
-                  id='show-closed-referrals'
-                  name='showClosed'
-                  type='checkbox'
-                  checked={showClosed}
-                  onChange={(e) => setShowClosed(e.target.checked)}
-                  className='rounded'
-                />
-                <span>Show closed</span>
-              </label>
+            {(setShowClosed || setShowCoaches) && (
+              <div className='absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-3'>
+                {setShowClosed && (
+                  <label htmlFor='show-closed-referrals' className='flex items-center gap-1 text-xs'>
+                    <input
+                      id='show-closed-referrals'
+                      name='showClosed'
+                      type='checkbox'
+                      checked={showClosed}
+                      onChange={(e) => setShowClosed(e.target.checked)}
+                      className='rounded'
+                    />
+                    <span>Show closed</span>
+                  </label>
+                )}
+                {setShowCoaches && (
+                  <label htmlFor='show-coaches-table' className='flex items-center gap-1 text-xs'>
+                    <input
+                      id='show-coaches-table'
+                      name='showCoaches'
+                      type='checkbox'
+                      checked={showCoaches}
+                      onChange={(e) => setShowCoaches(e.target.checked)}
+                      className='rounded'
+                    />
+                    <span>Show Coaches table</span>
+                  </label>
+                )}
+              </div>
             )}
           </div>
           {showAddButton && (
@@ -513,27 +710,45 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showAddButton 
                             value={selectedRow.org_id}
                             onChange={(e) => setSelectedRow({ ...selectedRow, org_id: Number(e.target.value), contact_id: null })}
                           >
-                            <option value={0}>-- Select an organisation --</option>
+                            <option value={0}>-- Select Organisation --</option>
                             {orgsData?.filter(org => org.disabled === 0 && org.role_referrer === 1).map(org => (
                               <option key={org.org_id} value={org.org_id}>{org.name}{org.area_name ? ` (${org.area_name})` : ''}</option>
                             ))}
                           </select>
                         </div>
-                        <div>
-                          <label htmlFor='edit-contact' className='block text-sm font-medium text-gray-700'>Contact</label>
-                          <select
-                            id='edit-contact'
-                            name='contact_id'
-                            autoComplete='off'
-                            className='w-full rounded-md border p-2'
-                            value={selectedRow.contact_id || ''}
-                            onChange={(e) => setSelectedRow({ ...selectedRow, contact_id: e.target.value ? Number(e.target.value) : null })}
-                          >
-                            <option value=''>-- Select a contact --</option>
-                            {contactsData?.filter(contact => contact.disabled === 0 && contact.org_id === selectedRow.org_id).map(contact => (
-                              <option key={contact.contact_id} value={contact.contact_id}>{contact.name}</option>
-                            ))}
-                          </select>
+                        <div className='grid grid-cols-2 gap-3'>
+                          <div>
+                            <label htmlFor='edit-contact' className='block text-sm font-medium text-gray-700'>Contact</label>
+                            <select
+                              id='edit-contact'
+                              name='contact_id'
+                              autoComplete='off'
+                              className='w-full rounded-md border p-2'
+                              value={selectedRow.contact_id || ''}
+                              onChange={(e) => setSelectedRow({ ...selectedRow, contact_id: e.target.value ? Number(e.target.value) : null })}
+                            >
+                              <option value=''>-- Select Contact --</option>
+                              {contactsData?.filter(contact => contact.disabled === 0 && contact.org_id === selectedRow.org_id).map(contact => (
+                                <option key={contact.contact_id} value={contact.contact_id}>{contact.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label htmlFor='edit-reader-area' className='block text-sm font-medium text-gray-700'>Reader Area</label>
+                            <select
+                              id='edit-reader-area'
+                              name='area_id'
+                              autoComplete='off'
+                              className='w-full rounded-md border p-2'
+                              value={selectedRow.area_id ?? ''}
+                              onChange={(e) => setSelectedRow({ ...selectedRow, area_id: Number(e.target.value) || null })}
+                            >
+                              <option value=''>-- Select Area --</option>
+                              {readerAreas.map(area => (
+                                <option key={area.area_id} value={area.area_id}>{area.name}</option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
                         <div>
                           <div className='flex items-center gap-4 mb-1'>
@@ -551,9 +766,35 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showAddButton 
                           />
                           {tableState.errors.referral && <p className='text-red-500 text-xs mt-1'>{tableState.errors.referral}</p>}
                         </div>
-                        <div className='grid grid-cols-3 gap-3'>
+                        <div className='grid grid-cols-2 gap-3'>
                           <div>
-                            <label htmlFor='edit-reader-name' className='block text-sm font-medium text-gray-700'>Reader Name</label>
+                            <label htmlFor='edit-date' className='block text-sm font-medium text-gray-700'>Date *</label>
+                            <input
+                              id='edit-date'
+                              name='referral_at'
+                              type='date'
+                              autoComplete='off'
+                              className='w-full rounded-md border p-2'
+                              value={selectedRow.referral_at.split('T')[0].split(' ')[0]}
+                              onChange={(e) => setSelectedRow({ ...selectedRow, referral_at: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor='edit-reader-first-name' className='block text-sm font-medium text-gray-700'>Reader First Name</label>
+                            <input
+                              id='edit-reader-first-name'
+                              name='reader_first_name'
+                              type='text'
+                              autoComplete='off'
+                              className='w-full rounded-md border p-2'
+                              value={selectedRow.reader_first_name || ''}
+                              onChange={(e) => setSelectedRow({ ...selectedRow, reader_first_name: e.target.value || null })}
+                            />
+                          </div>
+                        </div>
+                        <div className='grid grid-cols-2 gap-3'>
+                          <div>
+                            <label htmlFor='edit-reader-name' className='block text-sm font-medium text-gray-700'>Reader ID</label>
                             <input
                               id='edit-reader-name'
                               name='reader_name'
@@ -578,18 +819,6 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showAddButton 
                                 <option key={key} value={key}>{label}</option>
                               ))}
                             </select>
-                          </div>
-                          <div>
-                            <label htmlFor='edit-date' className='block text-sm font-medium text-gray-700'>Date *</label>
-                            <input
-                              id='edit-date'
-                              name='referral_at'
-                              type='date'
-                              autoComplete='off'
-                              className='w-full rounded-md border p-2'
-                              value={selectedRow.referral_at.split('T')[0].split(' ')[0]}
-                              onChange={(e) => setSelectedRow({ ...selectedRow, referral_at: e.target.value })}
-                            />
                           </div>
                         </div>
                       </div>
@@ -658,28 +887,46 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showAddButton 
             value={newReferral.org_id}
             onChange={(e) => setNewReferral({ ...newReferral, org_id: Number(e.target.value), contact_id: null })}
           >
-            <option value={0}>-- Select an organisation --</option>
+            <option value={0}>-- Select Organisation --</option>
             {orgsData?.filter(org => org.disabled === 0 && org.role_referrer === 1).map(org => (
               <option key={org.org_id} value={org.org_id}>{org.name}{org.area_name ? ` (${org.area_name})` : ''}</option>
             ))}
           </select>
           {tableState.errors.org_id && <p className='text-red-500 text-xs mt-1'>{tableState.errors.org_id}</p>}
         </div>
-        <div>
-          <label htmlFor='add-contact' className='block text-sm font-medium text-gray-700'>Contact</label>
-          <select
-            id='add-contact'
-            name='contact_id'
-            autoComplete='off'
-            className='w-full rounded-md border p-2'
-            value={newReferral.contact_id || ''}
-            onChange={(e) => setNewReferral({ ...newReferral, contact_id: e.target.value ? Number(e.target.value) : null })}
-          >
-            <option value=''>-- Select a contact --</option>
-            {contactsData?.filter(contact => contact.disabled === 0 && contact.org_id === newReferral.org_id).map(contact => (
-              <option key={contact.contact_id} value={contact.contact_id}>{contact.name}</option>
-            ))}
-          </select>
+        <div className='grid grid-cols-2 gap-3'>
+          <div>
+            <label htmlFor='add-contact' className='block text-sm font-medium text-gray-700'>Contact</label>
+            <select
+              id='add-contact'
+              name='contact_id'
+              autoComplete='off'
+              className='w-full rounded-md border p-2'
+              value={newReferral.contact_id || ''}
+              onChange={(e) => setNewReferral({ ...newReferral, contact_id: e.target.value ? Number(e.target.value) : null })}
+            >
+              <option value=''>-- Select Contact --</option>
+              {contactsData?.filter(contact => contact.disabled === 0 && contact.org_id === newReferral.org_id).map(contact => (
+                <option key={contact.contact_id} value={contact.contact_id}>{contact.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor='add-reader-area' className='block text-sm font-medium text-gray-700'>Reader Area</label>
+            <select
+              id='add-reader-area'
+              name='area_id'
+              autoComplete='off'
+              className='w-full rounded-md border p-2'
+              value={newReferral.area_id ?? ''}
+              onChange={(e) => setNewReferral({ ...newReferral, area_id: Number(e.target.value) || null })}
+            >
+              <option value=''>-- Select Area --</option>
+              {readerAreas.map(area => (
+                <option key={area.area_id} value={area.area_id}>{area.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div>
           <div className='flex items-center gap-4 mb-1'>
@@ -697,18 +944,32 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showAddButton 
           />
           {tableState.errors.referral && <p className='text-red-500 text-xs mt-1'>{tableState.errors.referral}</p>}
         </div>
-        <div>
-          <label htmlFor='add-date' className='block text-sm font-medium text-gray-700'>Date *</label>
-          <input
-            id='add-date'
-            name='referral_at'
-            type='date'
-            autoComplete='off'
-            className={`w-full rounded-md border p-2 ${tableState.errors.referral_at ? 'border-red-500' : ''}`}
-            value={newReferral.referral_at}
-            onChange={(e) => setNewReferral({ ...newReferral, referral_at: e.target.value })}
-          />
-          {tableState.errors.referral_at && <p className='text-red-500 text-xs mt-1'>{tableState.errors.referral_at}</p>}
+        <div className='grid grid-cols-2 gap-3'>
+          <div>
+            <label htmlFor='add-date' className='block text-sm font-medium text-gray-700'>Date *</label>
+            <input
+              id='add-date'
+              name='referral_at'
+              type='date'
+              autoComplete='off'
+              className={`w-full rounded-md border p-2 ${tableState.errors.referral_at ? 'border-red-500' : ''}`}
+              value={newReferral.referral_at}
+              onChange={(e) => setNewReferral({ ...newReferral, referral_at: e.target.value })}
+            />
+            {tableState.errors.referral_at && <p className='text-red-500 text-xs mt-1'>{tableState.errors.referral_at}</p>}
+          </div>
+          <div>
+            <label htmlFor='add-reader-first-name' className='block text-sm font-medium text-gray-700'>Reader First Name</label>
+            <input
+              id='add-reader-first-name'
+              name='reader_first_name'
+              type='text'
+              autoComplete='off'
+              className='w-full rounded-md border p-2'
+              value={newReferral.reader_first_name || ''}
+              onChange={(e) => setNewReferral({ ...newReferral, reader_first_name: e.target.value || null })}
+            />
+          </div>
         </div>
       </CustomTableModal>
 

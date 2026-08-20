@@ -10,6 +10,10 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 # ------------------------------------------------------------------------------
+/**
+ * @var \Slim\App $app
+ */
+# ------------------------------------------------------------------------------
 
 $app->get('/reports/get-audit-logs', function (Request $request, Response $response) {
     $db = new DbReports();

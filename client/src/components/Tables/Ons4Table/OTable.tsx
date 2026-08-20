@@ -3,6 +3,7 @@ import { type ColumnDef, type SortingState } from '@tanstack/react-table';
 import { ArrowUpDown } from 'lucide-react';
 
 import { type TReadersSchema } from '@hooks/useReaders';
+import { type TOns4Status, ons4StatusLabels } from '@lib/types';
 import { BaseTable, useTableState, createSortableHeader } from '../BaseTable';
 import HoverHelp from '../../Common/HoverHelp';
 
@@ -45,90 +46,58 @@ const createOns4_1Header = () => {
   );
 };
 
-const Ons4Cell = ({ value, shouldHighlight }: { value: number; shouldHighlight?: boolean }) => {
-  const displayText = value ? 'yes' : 'no';
-  
-  if (!value) {
-    // If value is false (0), apply conditional styling
+const Ons4Cell = ({ value, shouldHighlight }: { value: TOns4Status; shouldHighlight?: boolean }) => {
+  const displayText = ons4StatusLabels[value];
+
+  if (value === 'declined') return <span className='bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs'>{displayText}</span>;
+  if (value === 'no') {
     if (shouldHighlight) {
-      // Red for S or P status
-      return (
-        <span className='bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs'>
-          {displayText}
-        </span>
-      );
+      return <span className='bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs'>{displayText}</span>;
     } else {
-      // Yellow for other statuses
-      return (
-        <span className='bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs'>
-          {displayText}
-        </span>
-      );
+      return <span className='bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs'>{displayText}</span>;
     }
   }
-  
+
   return <span>{displayText}</span>;
 };
 
-const Ons4_2Cell = ({ value, level, status }: { value: number; level: string; status: string }) => {
-  const displayText = value ? 'yes' : 'no';
-  
-  if (!value) {
-    // If value is false (0), apply conditional styling
+const Ons4_2Cell = ({ value, level, status }: { value: TOns4Status; level: string; status: string }) => {
+  const displayText = ons4StatusLabels[value];
+
+  if (value === 'declined') return <span className='bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs'>{displayText}</span>;
+  if (value === 'no') {
     const shouldHighlightRed = ['TP3', 'TP4', 'TP5'].includes(level) && ['S', 'P'].includes(status);
-    
     if (shouldHighlightRed) {
-      // Red for TP3/TP4/TP5 with S or P status
-      return (
-        <span className='bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs'>
-          {displayText}
-        </span>
-      );
+      return <span className='bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs'>{displayText}</span>;
     } else {
-      // Yellow for all other cases where ons4_2 is false
-      return (
-        <span className='bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs'>
-          {displayText}
-        </span>
-      );
+      return <span className='bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs'>{displayText}</span>;
     }
   }
-  
+
   return <span>{displayText}</span>;
 };
 
-const Ons4_3Cell = ({ value, level, status }: { value: number; level: string; status: string }) => {
-  const displayText = value ? 'yes' : 'no';
-  
-  if (!value) {
-    // If value is false (0), apply conditional styling
+const Ons4_3Cell = ({ value, level, status }: { value: TOns4Status; level: string; status: string }) => {
+  const displayText = ons4StatusLabels[value];
+
+  if (value === 'declined') return <span className='bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs'>{displayText}</span>;
+  if (value === 'no') {
     const shouldHighlightRed = level === 'TP5' && ['S', 'P'].includes(status);
-    
     if (shouldHighlightRed) {
-      // Red for TP5 with S or P status
-      return (
-        <span className='bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs'>
-          {displayText}
-        </span>
-      );
+      return <span className='bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs'>{displayText}</span>;
     } else {
-      // Yellow for all other cases where ons4_3 is false
-      return (
-        <span className='bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs'>
-          {displayText}
-        </span>
-      );
+      return <span className='bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs'>{displayText}</span>;
     }
   }
-  
+
   return <span>{displayText}</span>;
 };
 
 const DueCell = ({ reader }: { reader: Reader }) => {
   // Check if any ONS4 assessment is overdue (would be highlighted in red)
-  const ons4_1_overdue = !reader.ons4_1 && ['S', 'P'].includes(reader.status);
-  const ons4_2_overdue = !reader.ons4_2 && ['TP3', 'TP4', 'TP5'].includes(reader.level) && ['S', 'P'].includes(reader.status);
-  const ons4_3_overdue = !reader.ons4_3 && reader.level === 'TP5' && ['S', 'P'].includes(reader.status);
+  const ons4_1_overdue = reader.ons4_1 === 'no' && ['S', 'P'].includes(reader.status);
+  const ons4_2_overdue = reader.ons4_2 === 'no' && ['TP3', 'TP4', 'TP5'].includes(reader.level) && ['S', 'P'].includes(reader.status);
+  const ons4_3_overdue = reader.ons4_3 === 'no' && reader.level === 'TP5' && ['S', 'P'].includes(reader.status);
   
   const isDue = ons4_1_overdue || ons4_2_overdue || ons4_3_overdue;
   const displayText = isDue ? 'yes' : 'no';
@@ -195,20 +164,21 @@ export function OTable({ data, showFiltered, onShowFilteredChange }: OTableProps
   const copyToClipboard = useCallback(async () => {
     if (!data || data.length === 0) return;
     
-    const headers = ['Reader', 'Level', 'Status', 'ONS4-1', 'ONS4-2', 'ONS4-3', 'Due', 'Coach'];
+    const headers = ['Reader', 'First Name', 'Level', 'Status', 'ONS4-1', 'ONS4-2', 'ONS4-3', 'Due', 'Coach'];
     const rows = data.map(reader => {
-      const ons4_1_overdue = !reader.ons4_1 && ['S', 'P'].includes(reader.status);
-      const ons4_2_overdue = !reader.ons4_2 && ['TP3', 'TP4', 'TP5'].includes(reader.level) && ['S', 'P'].includes(reader.status);
-      const ons4_3_overdue = !reader.ons4_3 && reader.level === 'TP5' && ['S', 'P'].includes(reader.status);
+      const ons4_1_overdue = reader.ons4_1 === 'no' && ['S', 'P'].includes(reader.status);
+      const ons4_2_overdue = reader.ons4_2 === 'no' && ['TP3', 'TP4', 'TP5'].includes(reader.level) && ['S', 'P'].includes(reader.status);
+      const ons4_3_overdue = reader.ons4_3 === 'no' && reader.level === 'TP5' && ['S', 'P'].includes(reader.status);
       const isDue = ons4_1_overdue || ons4_2_overdue || ons4_3_overdue;
       
       return [
         reader.name,
+        reader.reader_first_name || '',
         reader.level,
         reader.status,
-        reader.ons4_1 ? 'yes' : 'no',
-        reader.ons4_2 ? 'yes' : 'no',
-        reader.ons4_3 ? 'yes' : 'no',
+        ons4StatusLabels[reader.ons4_1],
+        ons4StatusLabels[reader.ons4_2],
+        ons4StatusLabels[reader.ons4_3],
         isDue ? 'yes' : 'no',
         `${reader.coach_first_name || ''} ${reader.coach_last_name || ''}`.trim()
       ];
@@ -234,6 +204,12 @@ export function OTable({ data, showFiltered, onShowFilteredChange }: OTableProps
       header: createSortableHeader('Reader', true, copyToClipboard, tableState.showCopied),
     },
     {
+      id: 'reader_first_name',
+      accessorKey: 'reader_first_name',
+      header: createSortableHeader('First Name'),
+      cell: ({ row }) => row.original.reader_first_name ?? '',
+    },
+    {
       id: 'level',
       accessorKey: 'level',
       header: createCenteredSortableHeader('Level'),
@@ -255,7 +231,7 @@ export function OTable({ data, showFiltered, onShowFilteredChange }: OTableProps
     },
     {
       id: 'ons4_1',
-      accessorFn: (row) => row.ons4_1 ? 'yes' : 'no',
+      accessorFn: (row) => row.ons4_1,
       header: createOns4_1Header(),
       cell: ({ row }) => (
         <div className='text-center'>
@@ -268,7 +244,7 @@ export function OTable({ data, showFiltered, onShowFilteredChange }: OTableProps
     },
     {
       id: 'ons4_2',
-      accessorFn: (row) => row.ons4_2 ? 'yes' : 'no',
+      accessorFn: (row) => row.ons4_2,
       header: createCenteredSortableHeader('ONS4-2'),
       cell: ({ row }) => (
         <div className='text-center'>
@@ -282,7 +258,7 @@ export function OTable({ data, showFiltered, onShowFilteredChange }: OTableProps
     },
     {
       id: 'ons4_3',
-      accessorFn: (row) => row.ons4_3 ? 'yes' : 'no',
+      accessorFn: (row) => row.ons4_3,
       header: createCenteredSortableHeader('ONS4-3'),
       cell: ({ row }) => (
         <div className='text-center'>
@@ -297,9 +273,9 @@ export function OTable({ data, showFiltered, onShowFilteredChange }: OTableProps
     {
       id: 'due',
       accessorFn: (row) => {
-        const ons4_1_overdue = !row.ons4_1 && ['S', 'P'].includes(row.status);
-        const ons4_2_overdue = !row.ons4_2 && ['TP3', 'TP4', 'TP5'].includes(row.level) && ['S', 'P'].includes(row.status);
-        const ons4_3_overdue = !row.ons4_3 && row.level === 'TP5' && ['S', 'P'].includes(row.status);
+        const ons4_1_overdue = row.ons4_1 === 'no' && ['S', 'P'].includes(row.status);
+        const ons4_2_overdue = row.ons4_2 === 'no' && ['TP3', 'TP4', 'TP5'].includes(row.level) && ['S', 'P'].includes(row.status);
+        const ons4_3_overdue = row.ons4_3 === 'no' && row.level === 'TP5' && ['S', 'P'].includes(row.status);
         return (ons4_1_overdue || ons4_2_overdue || ons4_3_overdue) ? 'yes' : 'no';
       },
       header: createDueHeader(),
@@ -320,6 +296,7 @@ export function OTable({ data, showFiltered, onShowFilteredChange }: OTableProps
   const renderMobileCard = (reader: Reader) => (
     <div className='bg-white border rounded-lg p-4 shadow-sm'>
       <h3 className='font-semibold text-gray-900 mb-2'>{reader.name}</h3>
+      {reader.reader_first_name && <p className='text-sm text-gray-600 mb-2'>{reader.reader_first_name}</p>}
       <div className='space-y-1 text-sm'>
         <div className='flex items-center gap-2'>
           <span className='font-medium'>Level:</span>

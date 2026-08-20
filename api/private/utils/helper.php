@@ -38,7 +38,8 @@ class Status {
     function __construct(bool $success, int $code, string|array $message) {
         $this->success = $success;
         $this->code = $code;
-        $this->message = json_encode($message);
+        $this->message = json_encode($message, 
+                JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
         $this->data = null;
     }
     # --------------------------------------------------------------------------
@@ -364,7 +365,7 @@ function get_password_reset_form(string $token, string $nonce): string {
 # Requirments: 12 or more characters, 1 uppercase letter, 1 lowercase letter,
 # 1 number
 
-function is_valid_password($password) {
+function is_valid_password(string $password): bool {
     if (strlen($password) < 12) {
         return false;
     }

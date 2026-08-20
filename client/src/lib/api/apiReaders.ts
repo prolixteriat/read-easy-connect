@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { apiBaseUrl } from '@lib/config';
+import { ons4StatusEnum } from '@lib/types';
 import { type IApiResponse, posterAuth } from './posterAuth';
 
 // -----------------------------------------------------------------------------
@@ -33,9 +34,9 @@ const EditReaderSchema = z.object({
     TP3_certificate: z.number().optional(),
     TP4_certificate: z.number().optional(),
     TP5_certificate: z.number().optional(),
-    ons4_1: z.number().optional(),
-    ons4_2: z.number().optional(),
-    ons4_3: z.number().optional(),
+    ons4_1: ons4StatusEnum.optional(),
+    ons4_2: ons4StatusEnum.optional(),
+    ons4_3: ons4StatusEnum.optional(),
 });
 
 export type TEditReaderData = z.TypeOf<typeof EditReaderSchema>;

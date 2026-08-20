@@ -17,7 +17,7 @@ class DbReferrals extends DbBase {
     # --------------------------------------------------------------------------
     # Role: manager, coordinator
     # Mandatory: org_id, referral, referral_at
-    # Optional: contact_id
+    # Optional: contact_id, reader_first_name, area_id
 
     public function add_referral(Request $request): Status {
         try {
@@ -45,8 +45,8 @@ class DbReferrals extends DbBase {
                 return new Status(false, 400, ['message' => 'Referral cannot be empty']);
             }
             
-            $sql = 'INSERT INTO referrals (org_id, contact_id, by_id, referral, referral_at) 
-                    VALUES (:org_id, :contact_id, :by_id, :referral, :referral_at)';
+            $sql = 'INSERT INTO referrals (org_id, contact_id, by_id, referral, referral_at, first_name, area_id) 
+                    VALUES (:org_id, :contact_id, :by_id, :referral, :referral_at, :first_name, :area_id)';
 
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
@@ -57,7 +57,9 @@ class DbReferrals extends DbBase {
                 ':contact_id'   => $params['contact_id'] ?? null,
                 ':by_id'        => $this->user_id,
                 ':referral'     => $params['referral'],
-                ':referral_at'  => $params['referral_at']
+                ':referral_at'  => $params['referral_at'],
+                ':first_name'   => $this->encrypt_field($params['reader_first_name'] ?? null),
+                ':area_id'      => $params['area_id'] ?? null
             ]);
             if (!$result) {
                 throw new Exception('Failed to insert referral record');
@@ -82,7 +84,7 @@ class DbReferrals extends DbBase {
     # --------------------------------------------------------------------------
     # Role: manager, coordinator
     # Mandatory: referral_id
-    # Optional: org_id, contact_id, status, referral, referral_at
+    # Optional: org_id, contact_id, status, referral, referral_at, reader_first_name, area_id
 
     public function edit_referral(Request $request): Status {
         try {
@@ -133,9 +135,13 @@ class DbReferrals extends DbBase {
             $status_val = $params['status'] ?? $result['status'];
             $referral = $params['referral'] ?? $result['referral'];
             $referral_at = $params['referral_at'] ?? $result['referral_at'];
+            $first_name = array_key_exists('reader_first_name', $params)
+                ? $this->encrypt_field($params['reader_first_name'])
+                : $result['first_name'];
+            $area_id = array_key_exists('area_id', $params) ? $params['area_id'] : $result['area_id'];
 
             $sql = 'UPDATE referrals SET org_id = :org_id, contact_id = :contact_id, status = :status, referral = :referral, 
-                    referral_at = :referral_at WHERE referral_id = :referral_id';
+                    referral_at = :referral_at, first_name = :first_name, area_id = :area_id WHERE referral_id = :referral_id';
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([
                 ':org_id'       => $org_id,
@@ -143,6 +149,8 @@ class DbReferrals extends DbBase {
                 ':status'       => $status_val,
                 ':referral'     => $referral,
                 ':referral_at'  => $referral_at,
+                ':first_name'   => $first_name,
+                ':area_id'      => $area_id,
                 ':referral_id'  => $referral_id
             ]);
             
@@ -174,12 +182,14 @@ class DbReferrals extends DbBase {
             
             $params = $this->sanitise_array($request->getQueryParams());
             
-            $sql = 'SELECT r.*, o.name as org_name, c.name as contact_name, u.first_name, u.last_name, a.name as area_name, rd.name as reader_name 
+            $sql = 'SELECT r.*, r.first_name as reader_first_name, o.name as org_name, 
+                        c.name as contact_name, u.first_name, u.last_name, a.name as area_name, 
+                        rd.name as reader_name 
                     FROM referrals r 
                     JOIN orgs o ON r.org_id = o.org_id 
                     LEFT JOIN contacts c ON r.contact_id = c.contact_id 
                     JOIN users u ON r.by_id = u.user_id 
-                    LEFT JOIN areas a ON o.area_id = a.area_id 
+                    LEFT JOIN areas a ON r.area_id = a.area_id 
                     LEFT JOIN readers rd ON r.referral_id = rd.referral_id 
                     WHERE ' . $this->get_affiliate_filter();
             
@@ -208,6 +218,7 @@ class DbReferrals extends DbBase {
             
             foreach ($referrals as &$referral) {
                 $referral['contact_name'] = $this->decrypt_field($referral['contact_name']);
+                $referral['reader_first_name'] = $this->decrypt_field($referral['reader_first_name']);
             }
             
             $status = new Status(true, 200, $referrals);

@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { apiBaseUrl } from '@lib/config';
 import { fetcherAuth } from '@lib/fetcher';
 import { JwtManager } from '@lib/jwtManager';
+import { ons4StatusEnum } from '@lib/types';
 
 // -----------------------------------------------------------------------------
 
@@ -21,6 +22,7 @@ const readerFetcher = (data: string[]) => fetcherAuth(data, ReadersSchema);
 const ReadersSchema = z.object({
     reader_id: z.number(),
     name: z.string(),
+    reader_first_name: z.string().nullable(),
     affiliate_id: z.number(),
     area_id: z.number().nullable(),
     area_name: z.string().nullable(),
@@ -51,9 +53,9 @@ const ReadersSchema = z.object({
     TP3_certificate: z.number(),
     TP4_certificate: z.number(),
     TP5_certificate: z.number(),
-    ons4_1: z.number(),
-    ons4_2: z.number(),
-    ons4_3: z.number(),
+    ons4_1: ons4StatusEnum,
+    ons4_2: ons4StatusEnum,
+    ons4_3: ons4StatusEnum,
 });
 
 const ReadersSchemaArray = z.array(ReadersSchema);
@@ -76,7 +78,9 @@ export function useReaders(): IuseReaders {
     const token = new JwtManager().getToken();
     const { data, error, isLoading, mutate } = useSWR([searchUrl, token], 
         readersFetcher, { 
-            refreshInterval: 5 * 60 * 1000, // refresh every 5 mins
+            refreshInterval: 5 * 60 * 1000,
+            revalidateOnFocus: false,
+            keepPreviousData: true,
       });
     
     const response: IuseReaders = { 

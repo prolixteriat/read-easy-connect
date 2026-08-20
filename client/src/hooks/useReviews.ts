@@ -43,6 +43,7 @@ const ReviewsSchema = z.object({
     reader_name: z.string(),
     first_name: z.string(),
     last_name: z.string(),
+    reader_first_name: z.string(),
 });
 
 const ReviewsSchemaArray = z.array(ReviewsSchema);

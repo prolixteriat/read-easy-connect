@@ -33,11 +33,12 @@ export function createSortableHeader(title: string, showCopy = false, onCopy?: (
 
 export function createStatusColumn<T>(
   accessor: keyof T,
-  statusMap: Record<string, { bg: string; text: string }>
+  statusMap: Record<string, { bg: string; text: string }>,
+  title = 'Status'
 ): ColumnDef<T> {
   return {
     accessorKey: accessor as string,
-    header: createSortableHeader('Status'),
+    header: createSortableHeader(title),
     cell: ({ getValue }) => {
       const status = getValue() as string;
       const styles = statusMap[status] || { bg: 'bg-gray-100', text: 'text-gray-800' };

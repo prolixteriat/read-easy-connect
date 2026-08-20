@@ -19,6 +19,9 @@ export async function fetcher<T>(url: string, schema: z.ZodType<T>): Promise<T> 
     }
   
     console.error('Zod validation error:', parsed.error.issues);
+    for (const issue of parsed.error.issues) {
+        console.error(`${issue.path.join(".") || "<root>"}: ${issue.message}`);
+    }    
     throw new Error('Invalid data returned from API');
 }
 // -----------------------------------------------------------------------------
@@ -61,6 +64,9 @@ export async function fetcherAuth<T>(data: string[], schema: z.ZodType<T>): Prom
     }
   
     console.error('Zod validation error:', parsed.error.issues);
+    for (const issue of parsed.error.issues) {
+        console.error(`${issue.path.join(".") || "<root>"}: ${issue.message}`);
+    }
     throw new Error('Invalid data returned from API');
 }
 // -----------------------------------------------------------------------------

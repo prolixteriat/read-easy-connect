@@ -10,7 +10,7 @@ import {
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import { type TReferralsSchema } from '@hooks/useReferrals';
-import { referralfStatusLabels } from '@lib/types';
+import { referralfStatusLabels, referralfStatusChartColors, type TReferralStatus } from '@lib/types';
 
 // Register chart.js components
 ChartJS.register(
@@ -57,22 +57,12 @@ export default function EnquiryChart({ data, error }: EnquiryChartProps): React.
   const organisations = Object.keys(aggregatedData).sort();
   const statuses = Array.from(new Set(data.map(d => d.status))).sort();
 
-  // Define colors for each status to match table pills
-  const statusColors: Record<string, string> = {
-    'new': '#bbf7d080', // green-200 with transparency to match bg-green-100
-    'pending': '#bfdbfe80', // blue-200 with transparency to match bg-blue-100
-    'onhold': '#fef3c780', // yellow-200 with transparency to match bg-yellow-100
-    'closed-successful': '#f5d0fe80', // fuchsia-200 with transparency to match bg-fuchsia-100
-    'closed-withdrew': '#fed7aa80', // orange-200 with transparency to match bg-orange-100
-    'closed-unable': '#fecaca80', // red-200 with transparency to match bg-red-100
-  };
-
   const chartData = {
     labels: organisations,
     datasets: statuses.map(status => ({
       label: referralfStatusLabels[status as keyof typeof referralfStatusLabels] || status,
       data: organisations.map(org => aggregatedData[org][status] || 0),
-      backgroundColor: statusColors[status] || '#6b728080',
+      backgroundColor: referralfStatusChartColors[status as TReferralStatus] ?? '#6b728080',
       borderRadius: 4,
     })),
   };

@@ -29,6 +29,7 @@ type Review = {
   notes: string | null;
   created_at: string;
   reader_name: string;
+  reader_first_name: string;
   first_name: string;
   last_name: string;
 };
@@ -61,10 +62,11 @@ export default function ReviewsReport(): React.JSX.Element {
   const copyToClipboard = useCallback(async () => {
     if (!data || data.length === 0) return;
     
-    const headers = ['Date', 'Reader', 'Coach', 'Venue', 'Status'];
+    const headers = ['Date', 'Reader', 'First Name', 'Coach', 'Venue', 'Status'];
     const rows = data.map(review => [
       new Date(review.date).toLocaleDateString('en-GB'),
       review.reader_name,
+      review.reader_first_name,
       `${review.first_name} ${review.last_name}`,
       venuesData?.find(v => v.venue_id === review.venue_id)?.name || 'Unknown',
       review.status
@@ -119,6 +121,14 @@ export default function ReviewsReport(): React.JSX.Element {
       header: () => (
         <button className='flex items-center'>
           Reader <ArrowUpDown className='ml-1 h-4 w-4' />
+        </button>
+      ),
+    },
+    {
+      accessorKey: 'reader_first_name',
+      header: () => (
+        <button className='flex items-center'>
+          First Name <ArrowUpDown className='ml-1 h-4 w-4' />
         </button>
       ),
     },
@@ -250,6 +260,9 @@ export default function ReviewsReport(): React.JSX.Element {
               </p>
               <p className='text-sm text-gray-600 mb-1'>
                 <strong>Reader:</strong> {review.reader_name}
+              </p>
+              <p className='text-sm text-gray-600 mb-1'>
+                <strong>First Name:</strong> {review.reader_first_name}
               </p>
               <p className='text-sm text-gray-600 mb-1'>
                 <strong>Coach:</strong> {review.first_name} {review.last_name}

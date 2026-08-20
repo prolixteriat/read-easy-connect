@@ -129,7 +129,7 @@ class DbContacts extends DbBase {
             $marketing_consent = $params['marketing_consent'] ?? $result['marketing_consent'];
             $marketing_consent_at = $params['marketing_consent_at'] ?? $result['marketing_consent_at'];
             $marketing_consent_source = $params['marketing_consent_source'] ?? $result['marketing_consent_source'];
-            $disabled = $params['disabled'] ?? $result['disabled'];
+            $disabled = (int)$params['disabled'] ?? (int)$result['disabled'];
 
             if ($disabled && !$result['disabled']) {
                 $this->redact($contact_id);

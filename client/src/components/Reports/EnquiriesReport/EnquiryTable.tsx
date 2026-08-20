@@ -11,7 +11,7 @@ import {
 import { ArrowUpDown, Copy, ChevronDown, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
 
 import { type TReferralsSchema } from '@hooks/useReferrals';
-import { referralfStatusLabels } from '@lib/types';
+import { referralfStatusLabels, referralfStatusColors, type TReferralStatus } from '@lib/types';
 
 // -----------------------------------------------------------------------------
 
@@ -279,15 +279,7 @@ export default function EnquiryTable({ data, error }: EnquiryTableProps): React.
         }
         
         return (
-          <span className={`px-2 py-1 text-xs rounded-full ${
-            status === 'new' ? 'bg-green-100 text-green-800' :
-            status === 'pending' ? 'bg-blue-100 text-blue-800' :
-            status === 'onhold' ? 'bg-yellow-100 text-yellow-800' :
-            status === 'closed-successful' ? 'bg-fuchsia-100 text-fuchsia-800' :
-            status === 'closed-withdrew' ? 'bg-orange-100 text-orange-800' :
-            status === 'closed-unable' ? 'bg-red-100 text-red-800' :
-            'bg-gray-100 text-gray-800'
-          }`}>
+          <span className={`px-2 py-1 text-xs rounded-full ${referralfStatusColors[status as TReferralStatus] ?? 'bg-gray-100 text-gray-800'}`}>
             {referralfStatusLabels[status as keyof typeof referralfStatusLabels] || status}
           </span>
         );
@@ -393,15 +385,7 @@ export default function EnquiryTable({ data, error }: EnquiryTableProps): React.
                     TOTAL
                   </span>
                 ) : (
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    enquiry.status === 'new' ? 'bg-green-100 text-green-800' :
-                    enquiry.status === 'pending' ? 'bg-blue-100 text-blue-800' :
-                    enquiry.status === 'onhold' ? 'bg-yellow-100 text-yellow-800' :
-                    enquiry.status === 'closed-successful' ? 'bg-fuchsia-100 text-fuchsia-800' :
-                    enquiry.status === 'closed-withdrew' ? 'bg-orange-100 text-orange-800' :
-                    enquiry.status === 'closed-unable' ? 'bg-red-100 text-red-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span className={`px-2 py-1 text-xs rounded-full ${referralfStatusColors[enquiry.status as TReferralStatus] ?? 'bg-gray-100 text-gray-800'}`}>
                     {referralfStatusLabels[enquiry.status as keyof typeof referralfStatusLabels] || enquiry.status}
                   </span>
                 )}

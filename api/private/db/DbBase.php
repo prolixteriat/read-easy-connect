@@ -185,7 +185,7 @@ class DbBase  {
     }
     # ------------------------------------------------------------------------------
 
-    protected function run_query_param(string $sql, $param): mixed {
+    protected function run_query_param(string $sql, string|int|float|bool|null $param): mixed {
         try {
             # Validate SQL contains exactly one parameter placeholder
             if (substr_count($sql, ':param') !== 1) {

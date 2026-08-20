@@ -10,6 +10,10 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 # ------------------------------------------------------------------------------
+/**
+ * @var \Slim\App $app
+ */
+# ------------------------------------------------------------------------------
 # TODO (delete: replaced with add-org)
 $app->post('/org/add-venue', function (Request $request, Response $response) {
     $db = new DbOrg();

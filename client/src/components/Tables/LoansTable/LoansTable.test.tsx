@@ -33,7 +33,7 @@ vi.mock('@components/Common', () => ({
 // -----------------------------------------------------------------------------
 
 import { useLoans } from '@hooks/useLoans';
-import { useReaders } from '@hooks/useReaders';
+import { useReaders, type TReadersSchema } from '@hooks/useReaders';
 
 const mockLoans = [
   { loan_id: 1, reader_id: 1, item: 'Book A', loan_date: '2024-01-01', return_date: null, status: 'loaned', created_at: '2024-01-01', reader_name: 'John Doe' },
@@ -41,9 +41,9 @@ const mockLoans = [
   { loan_id: 3, reader_id: 3, item: 'Book C', loan_date: '2024-01-03', return_date: null, status: 'lost', created_at: '2024-01-03', reader_name: 'Bob Wilson' },
 ];
 
-const mockReaders = [
-  { reader_id: 1, name: 'John Doe', affiliate_id: 1, area_id: 1, area_name: 'North Area', coach_id: 1, coach_first_name: 'Coach', coach_last_name: 'One', referral_id: null, created_at: '2024-01-01', level: 'TP1', status: 'S', availability: null, notes: null, enrolment_at: null, coaching_start_at: null, graduation_at: null, TP1_start_at: null, TP2_start_at: null, TP3_start_at: null, TP4_start_at: null, TP5_start_at: null, TP1_completion_at: null, TP2_completion_at: null, TP3_completion_at: null, TP4_completion_at: null, TP5_completion_at: null, TP1_certificate: 0, TP2_certificate: 0, TP3_certificate: 0, TP4_certificate: 0, TP5_certificate: 0, ons4_1: 0, ons4_2: 0, ons4_3: 0 },
-  { reader_id: 2, name: 'Jane Smith', affiliate_id: 1, area_id: 1, area_name: 'North Area', coach_id: 2, coach_first_name: 'Coach', coach_last_name: 'Two', referral_id: null, created_at: '2024-01-02', level: 'TP2', status: 'P', availability: null, notes: null, enrolment_at: null, coaching_start_at: null, graduation_at: null, TP1_start_at: null, TP2_start_at: null, TP3_start_at: null, TP4_start_at: null, TP5_start_at: null, TP1_completion_at: null, TP2_completion_at: null, TP3_completion_at: null, TP4_completion_at: null, TP5_completion_at: null, TP1_certificate: 0, TP2_certificate: 0, TP3_certificate: 0, TP4_certificate: 0, TP5_certificate: 0, ons4_1: 0, ons4_2: 0, ons4_3: 0 },
+const mockReaders: TReadersSchema = [
+  { reader_id: 1, name: 'John Doe', reader_first_name: 'Alan', affiliate_id: 1, area_id: 1, area_name: 'North Area', coach_id: 1, coach_first_name: 'Coach', coach_last_name: 'One', referral_id: null, created_at: '2024-01-01', level: 'TP1', status: 'S', availability: null, notes: null, enrolment_at: null, coaching_start_at: null, graduation_at: null, TP1_start_at: null, TP2_start_at: null, TP3_start_at: null, TP4_start_at: null, TP5_start_at: null, TP1_completion_at: null, TP2_completion_at: null, TP3_completion_at: null, TP4_completion_at: null, TP5_completion_at: null, TP1_certificate: 0, TP2_certificate: 0, TP3_certificate: 0, TP4_certificate: 0, TP5_certificate: 0, ons4_1: 'no', ons4_2: 'no', ons4_3: 'no' },
+  { reader_id: 2, name: 'Jane Smith', reader_first_name: 'Brian', affiliate_id: 1, area_id: 1, area_name: 'North Area', coach_id: 2, coach_first_name: 'Coach', coach_last_name: 'Two', referral_id: null, created_at: '2024-01-02', level: 'TP2', status: 'P', availability: null, notes: null, enrolment_at: null, coaching_start_at: null, graduation_at: null, TP1_start_at: null, TP2_start_at: null, TP3_start_at: null, TP4_start_at: null, TP5_start_at: null, TP1_completion_at: null, TP2_completion_at: null, TP3_completion_at: null, TP4_completion_at: null, TP5_completion_at: null, TP1_certificate: 0, TP2_certificate: 0, TP3_certificate: 0, TP4_certificate: 0, TP5_certificate: 0, ons4_1: 'no', ons4_2: 'no', ons4_3: 'no' },
 ];
 
 // -----------------------------------------------------------------------------

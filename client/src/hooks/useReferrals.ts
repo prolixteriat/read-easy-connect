@@ -35,8 +35,10 @@ const ReferralsSchema = z.object({
     contact_name: z.string().nullable(),
     first_name: z.string(),
     last_name: z.string(),
+    area_id: z.number().nullable(),
     area_name: z.string().nullable(),
-    reader_name: z.string().nullable()
+    reader_name: z.string().nullable(),
+    reader_first_name: z.string().nullable()
 });
 
 const ReferralsSchemaArray = z.array(ReferralsSchema);

@@ -230,7 +230,7 @@ class DbUsers extends DbBase {
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            $disabled = $params['disabled'] ?? $result['disabled'];
+            $disabled = (int)$params['disabled'] ?? (int)$result['disabled'];
             $password_reset = $params['password_reset'] ?? $result['password_reset'];
             $user_status = $params['status'] ?? $result['status'];
             $new_email = $result['email'];
