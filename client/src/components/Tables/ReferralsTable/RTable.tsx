@@ -449,7 +449,12 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showCoaches, s
 
   const validateEditForm = () => {
     const newErrors: Record<string, string> = {};
-    if (selectedRow && !selectedRow.referral.trim()) newErrors.referral = 'Enquiry is required';
+    if (selectedRow && !selectedRow.referral.trim()) {
+      newErrors.referral = 'Enquiry is required';
+    }
+    if (selectedRow && selectedRow.status === 'closed-successful' && !selectedRow.reader_name) {
+      newErrors.reader_name = 'Use \'Edit Reader\' to associate a Reader with this enquiry before changing status to \'Successful - now paired with coach\'';
+    }
     tableState.setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -800,10 +805,11 @@ export function RTable({ data, onSave, showClosed, setShowClosed, showCoaches, s
                               name='reader_name'
                               type='text'
                               autoComplete='off'
-                              className='w-full rounded-md border p-2 bg-gray-50'
+                              className={`w-full rounded-md border p-2 bg-gray-50 ${tableState.errors.reader_name ? 'border-red-500' : ''}`}
                               value={selectedRow.reader_name || ''}
                               readOnly
                             />
+                            {tableState.errors.reader_name && <p className='text-red-500 text-xs mt-1'>{tableState.errors.reader_name}</p>}
                           </div>
                           <div>
                             <label htmlFor='edit-status' className='block text-sm font-medium text-gray-700'>Status</label>

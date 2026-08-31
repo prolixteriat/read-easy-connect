@@ -84,7 +84,8 @@ export default function AuditReport(): React.JSX.Element {
 
   const columns: ColumnDef<AuditLog>[] = [
     {
-      accessorKey: 'created_at',
+      id: 'created_at',
+      accessorFn: (row) => formatDate(row.created_at),
       header: () => (
         <div className='flex items-center justify-between relative'>
           <button className='flex items-center'>
@@ -107,7 +108,7 @@ export default function AuditReport(): React.JSX.Element {
           )}
         </div>
       ),
-      cell: ({ getValue }) => formatDate(getValue() as string),
+      cell: ({ getValue }) => getValue() as string,
     },
     {
       accessorKey: 'type',
@@ -127,6 +128,7 @@ export default function AuditReport(): React.JSX.Element {
     },
     {
       id: 'performed_by',
+      accessorFn: (row) => `${row.performed_by_first_name} ${row.performed_by_last_name}`,
       header: () => (
         <button className='flex items-center'>
           Performed By <ArrowUpDown className='ml-1 h-4 w-4' />
@@ -137,6 +139,9 @@ export default function AuditReport(): React.JSX.Element {
     },
     {
       id: 'performed_on',
+      accessorFn: (row) => row.performed_on_first_name && row.performed_on_last_name
+        ? `${row.performed_on_first_name} ${row.performed_on_last_name}`
+        : '-',
       header: () => (
         <button className='flex items-center'>
           Performed On <ArrowUpDown className='ml-1 h-4 w-4' />
