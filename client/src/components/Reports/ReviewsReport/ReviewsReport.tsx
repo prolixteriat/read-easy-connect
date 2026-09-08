@@ -29,7 +29,7 @@ type Review = {
   notes: string | null;
   created_at: string;
   reader_name: string;
-  reader_first_name: string;
+  reader_first_name: string | null;
   first_name: string;
   last_name: string;
 };
